@@ -1,5 +1,7 @@
 ## Sample of Google Gemini RAG
 
+this project use Vertex AI for implement personal RAG Website
+
 ### Enviroment setup
 
 ```
@@ -13,3 +15,6 @@ source venv/bin/activate && pip install -r requirement.txt
 ```
 GOOGLE_API_KEY={your-api-key}
 ```
+
+
+https://docs.cloud.google.com/vertex-ai/generative-ai/docs/model-reference/inference?hl=zh-tw

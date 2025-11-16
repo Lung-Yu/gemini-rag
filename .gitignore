@@ -12,3 +12,8 @@ logs/
 data/
 models/
 *.sqlite3
+
+/backend/__pycache__/
+/backend/venv/
+/backend/.env
+/backend/logs/

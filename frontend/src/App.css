@@ -1,0 +1,108 @@
+.App {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  max-width: 1200px;
+  margin: 0 auto;
+  background: white;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+}
+
+.App-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 20px 30px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.App-header h1 {
+  margin: 0 0 10px 0;
+  font-size: 28px;
+}
+
+.header-info {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-size: 14px;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 15px;
+  font-weight: 500;
+}
+
+.status.online {
+  background: rgba(76, 175, 80, 0.3);
+}
+
+.status.offline {
+  background: rgba(244, 67, 54, 0.3);
+}
+
+.files-count {
+  padding: 5px 12px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 15px;
+}
+
+.toggle-files-btn {
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #667eea;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  margin-left: auto;
+}
+
+.toggle-files-btn:hover {
+  background: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.App-main {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.App-footer {
+  padding: 15px;
+  text-align: center;
+  background: #f5f5f5;
+  color: #666;
+  font-size: 12px;
+  border-top: 1px solid #e0e0e0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .App {
+    max-width: 100%;
+    box-shadow: none;
+  }
+
+  .App-header h1 {
+    font-size: 22px;
+  }
+
+  .header-info {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .toggle-files-btn {
+    margin-left: 0;
+    width: 100%;
+  }
+}
