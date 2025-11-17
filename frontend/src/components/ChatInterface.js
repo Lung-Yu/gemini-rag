@@ -2,6 +2,31 @@ import React, { useState, useRef, useEffect } from 'react';
 import './ChatInterface.css';
 import { sendMessage, getAvailableModels, searchDocuments, listFiles } from '../services/api';
 import chatWebSocket from '../services/websocket';
+import { FaRobot } from 'react-icons/fa';
+import {
+  FiSettings,
+  FiX,
+  FiSave,
+  FiAlertTriangle,
+  FiRefreshCw,
+  FiLoader,
+  FiFolder,
+  FiSmile,
+  FiUser,
+  FiTarget,
+  FiClipboard,
+  FiSearch,
+  FiSend,
+  FiCheckCircle,
+  FiAlertCircle,
+  FiZap
+} from 'react-icons/fi';
+
+const exampleQuestions = [
+  '誰有 CISSP 證照？',
+  '列出所有人的年齡',
+  '總共有多少人？'
+];
 
 function ChatInterface({ messages, setMessages, isLoading, setIsLoading, wsConnected, wsConnecting }) {
   const [inputValue, setInputValue] = useState('');
@@ -181,7 +206,7 @@ function ChatInterface({ messages, setMessages, isLoading, setIsLoading, wsConne
         if (filesData.files && filesData.files.length > 0) {
           // Use all files
           filesToUse = filesData.files.map(f => f.name);
-          console.log(`📁 自動使用 ${filesToUse.length} 個檔案`);
+          console.log(`Auto-selecting ${filesToUse.length} files for context`);
         }
       } catch (error) {
         console.error('自動載入檔案失敗:', error);
@@ -269,8 +294,12 @@ function ChatInterface({ messages, setMessages, isLoading, setIsLoading, wsConne
         <div className="settings-overlay">
           <div className="settings-panel">
             <div className="settings-header">
-              <h3>⚙️ 系統提示詞設定</h3>
-              <button onClick={() => setShowSettings(false)} className="close-btn">✕</button>
+              <h3>
+                <FiSettings aria-hidden /> 系統提示詞設定
+              </h3>
+              <button onClick={() => setShowSettings(false)} className="close-btn" aria-label="關閉設定">
+                <FiX aria-hidden />
+              </button>
             </div>
             <div className="settings-content">
               <div className="setting-group">
@@ -297,7 +326,7 @@ function ChatInterface({ messages, setMessages, isLoading, setIsLoading, wsConne
                   使用英文範本
                 </button>
                 <button onClick={handleSaveSystemPrompt} className="primary-btn">
-                  💾 儲存設定
+                  <FiSave aria-hidden /> 儲存設定
                 </button>
               </div>
             </div>
@@ -308,12 +337,14 @@ function ChatInterface({ messages, setMessages, isLoading, setIsLoading, wsConne
       {/* Model Selector */}
       <div className="model-selector-bar">
         <div className="model-selector">
-          <label>🤖 模型：</label>
+          <label>
+            <FaRobot aria-hidden /> 模型：
+          </label>
           {modelsLoading ? (
             <span className="loading-text">載入中...</span>
           ) : modelsError ? (
             <span className="error-text" title={modelsError}>
-              ⚠️ 載入失敗
+              <FiAlertTriangle aria-hidden /> 載入失敗
             </span>
           ) : (
             <select value={selectedModel} onChange={handleModelChange}>
@@ -334,8 +365,9 @@ function ChatInterface({ messages, setMessages, isLoading, setIsLoading, wsConne
           }} 
           className="settings-btn"
           title="系統提示詞設定"
+          aria-label="系統提示詞設定"
         >
-          ⚙️
+          <FiSettings aria-hidden />
         </button>
         
         {/* Clear Chat Button */}
@@ -344,23 +376,30 @@ function ChatInterface({ messages, setMessages, isLoading, setIsLoading, wsConne
           className="clear-btn"
           title="清空對話"
           disabled={messages.length === 0}
+          aria-label="清空對話"
         >
-          🔄
+          <FiRefreshCw aria-hidden />
         </button>
         
         {/* WebSocket 連接狀態 */}
         <div className="ws-status">
           {wsConnecting ? (
-            <span className="ws-connecting">⏳ 連接中...</span>
+            <span className="ws-connecting">
+              <FiLoader aria-hidden className="icon-spin" /> 連接中...
+            </span>
           ) : wsConnected ? (
-            <span className="ws-connected">🟢 即時連接</span>
+            <span className="ws-connected">
+              <FiCheckCircle aria-hidden /> 即時連接
+            </span>
           ) : (
-            <span className="ws-disconnected">🔴 標準模式</span>
+            <span className="ws-disconnected">
+              <FiAlertCircle aria-hidden /> 標準模式
+            </span>
           )}
         </div>
         {selectedFiles.length > 0 && (
           <div className="selected-files-indicator">
-            📁 已選 {selectedFiles.length} 個檔案
+            <FiFolder aria-hidden /> 已選 {selectedFiles.length} 個檔案
           </div>
         )}
       </div>
@@ -368,14 +407,19 @@ function ChatInterface({ messages, setMessages, isLoading, setIsLoading, wsConne
       <div className="messages-container">
         {messages.length === 0 && (
           <div className="welcome-message">
-            <h2>👋 歡迎使用 Gemini RAG Chat</h2>
+            <h2>
+              <FiSmile aria-hidden /> 歡迎使用 Gemini RAG Chat
+            </h2>
             <p>選擇 AI 模型，搜尋相關文件，開始智慧問答。</p>
             <div className="example-questions">
               <p>範例問題：</p>
               <ul>
-                <li>誰有 CISSP 證照？</li>
-                <li>列出所有人的年齡</li>
-                <li>總共有多少人？</li>
+                {exampleQuestions.map((question) => (
+                  <li key={question} className="example-question">
+                    <FiZap aria-hidden className="example-icon" />
+                    <span>{question}</span>
+                  </li>
+                ))}
               </ul>
             </div>
           </div>
@@ -387,22 +431,34 @@ function ChatInterface({ messages, setMessages, isLoading, setIsLoading, wsConne
             className={`message ${message.sender} ${message.isError ? 'error' : ''}`}
           >
             <div className="message-avatar">
-              {message.sender === 'user' ? '👤' : '🤖'}
+              {message.sender === 'user' ? (
+                <FiUser aria-hidden />
+              ) : (
+                <FaRobot aria-hidden />
+              )}
             </div>
             <div className="message-content">
               <div className="message-text">{message.text}</div>
               <div className="message-meta">
                 {message.filesUsed && (
-                  <span>📁 {message.filesUsed} 個檔案</span>
+                  <span>
+                    <FiFolder aria-hidden /> {message.filesUsed} 個檔案
+                  </span>
                 )}
                 {message.modelUsed && (
-                  <span>🤖 {message.modelUsed}</span>
+                  <span>
+                    <FaRobot aria-hidden /> {message.modelUsed}
+                  </span>
                 )}
                 {message.selectedFilesCount > 0 && (
-                  <span>🎯 選定 {message.selectedFilesCount} 個</span>
+                  <span>
+                    <FiTarget aria-hidden /> 選定 {message.selectedFilesCount} 個
+                  </span>
                 )}
                 {message.promptTokens !== undefined && message.completionTokens !== undefined && (
-                  <span>📋 輸入: {message.promptTokens} | 輸出: {message.completionTokens} tokens</span>
+                  <span>
+                    <FiClipboard aria-hidden /> 輸入: {message.promptTokens} | 輸出: {message.completionTokens} tokens
+                  </span>
                 )}
               </div>
               <div className="message-time">
@@ -417,7 +473,9 @@ function ChatInterface({ messages, setMessages, isLoading, setIsLoading, wsConne
 
         {isLoading && (
           <div className="message bot loading">
-            <div className="message-avatar">🤖</div>
+            <div className="message-avatar">
+              <FaRobot aria-hidden />
+            </div>
             <div className="message-content">
               <div className="typing-indicator">
                 <span></span>
@@ -435,8 +493,12 @@ function ChatInterface({ messages, setMessages, isLoading, setIsLoading, wsConne
       {showFileSelector && (
         <div className="file-selector-panel">
           <div className="file-selector-header">
-            <h3>🔍 相關文件 ({searchResults.length})</h3>
-            <button onClick={() => setShowFileSelector(false)} className="close-btn">✕</button>
+            <h3>
+              <FiSearch aria-hidden /> 相關文件 ({searchResults.length})
+            </h3>
+            <button onClick={() => setShowFileSelector(false)} className="close-btn" aria-label="關閉檔案列表">
+              <FiX aria-hidden />
+            </button>
           </div>
           <div className="file-selector-list">
             {searchResults.map(result => (
@@ -472,8 +534,13 @@ function ChatInterface({ messages, setMessages, isLoading, setIsLoading, wsConne
           disabled={!inputValue.trim() || isSearching}
           className="search-button"
           title="搜尋相關文件"
+          aria-label="搜尋相關文件"
         >
-          {isSearching ? '⏳' : '🔍'}
+          {isSearching ? (
+            <FiLoader aria-hidden className="icon-spin" />
+          ) : (
+            <FiSearch aria-hidden />
+          )}
         </button>
         <textarea
           value={inputValue}
@@ -487,8 +554,13 @@ function ChatInterface({ messages, setMessages, isLoading, setIsLoading, wsConne
           onClick={handleSend}
           disabled={!inputValue.trim() || isLoading}
           className="send-button"
+          aria-label="送出訊息"
         >
-          {isLoading ? '⏳' : '📤'}
+          {isLoading ? (
+            <FiLoader aria-hidden className="icon-spin" />
+          ) : (
+            <FiSend aria-hidden />
+          )}
         </button>
       </div>
     </div>

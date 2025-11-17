@@ -25,6 +25,9 @@
 }
 
 .model-selector label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-weight: 600;
   color: #555;
   font-size: 14px;
@@ -54,6 +57,9 @@
   border-radius: 15px;
   font-size: 13px;
   font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .loading-text {
@@ -74,6 +80,9 @@
   border-radius: 15px;
   font-size: 13px;
   font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .ws-connected {
@@ -109,6 +118,9 @@
 .welcome-message h2 {
   color: #667eea;
   margin-bottom: 15px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .example-questions {
@@ -133,9 +145,15 @@
   color: #555;
 }
 
-.example-questions li:before {
-  content: "💡 ";
-  margin-right: 5px;
+.example-question {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.example-icon {
+  color: #667eea;
+  margin-top: 4px;
 }
 
 .message {
@@ -297,6 +315,9 @@
   margin: 0;
   font-size: 16px;
   color: #333;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .close-btn {
@@ -307,6 +328,9 @@
   color: #666;
   padding: 4px 8px;
   transition: color 0.3s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .close-btn:hover {
@@ -414,6 +438,9 @@
   cursor: pointer;
   transition: all 0.3s ease;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .search-button:hover:not(:disabled) {
@@ -469,6 +496,9 @@
   cursor: pointer;
   transition: all 0.3s ease;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .send-button:hover:not(:disabled) {
@@ -559,6 +589,9 @@
   margin: 0;
   font-size: 18px;
   color: #333;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .settings-content {
@@ -641,6 +674,10 @@
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 .primary-btn:hover {
@@ -700,6 +737,34 @@
   background: #fff3e0;
   border-color: #ff5722;
   transform: rotate(180deg);
+}
+.message-meta span svg,
+.file-selector-header h3 svg,
+.selected-files-indicator svg,
+.welcome-message h2 svg,
+.model-selector label svg {
+  font-size: 16px;
+}
+
+.message-avatar svg {
+  font-size: 20px;
+}
+
+.icon-spin {
+  animation: rotate360 1s linear infinite;
+}
+
+@keyframes rotate360 {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.example-question .example-icon {
+  font-size: 16px;
 }
 
 .clear-btn:disabled {

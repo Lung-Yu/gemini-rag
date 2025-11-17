@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import './FileManager.css';
 import { listFiles, uploadFile, deleteFile, clearAllFiles } from '../services/api';
+import {
+  FiFolder,
+  FiUpload,
+  FiTrash2,
+  FiFileText,
+  FiInbox,
+  FiCheckCircle,
+  FiAlertCircle
+} from 'react-icons/fi';
 
 function FileManager({ onFilesChange }) {
   const [files, setFiles] = useState([]);
@@ -38,10 +47,10 @@ function FileManager({ onFilesChange }) {
     setUploadProgress(file.name);
     try {
       await uploadFile(file);
-      showMessage(`✓ ${file.name} 上傳成功`, 'success');
+      showMessage(`${file.name} 上傳成功`, 'success');
       loadFiles();
     } catch (error) {
-      showMessage(`✗ ${file.name} 上傳失敗`, 'error');
+      showMessage(`${file.name} 上傳失敗`, 'error');
     } finally {
       setUploadProgress(null);
       e.target.value = '';
@@ -53,10 +62,10 @@ function FileManager({ onFilesChange }) {
 
     try {
       await deleteFile(fileName);
-      showMessage(`✓ ${fileName} 已刪除`, 'success');
+      showMessage(`${fileName} 已刪除`, 'success');
       loadFiles();
     } catch (error) {
-      showMessage(`✗ 刪除失敗`, 'error');
+      showMessage('刪除失敗', 'error');
     }
   };
 
@@ -65,17 +74,19 @@ function FileManager({ onFilesChange }) {
 
     try {
       await clearAllFiles();
-      showMessage('✓ 所有檔案已清除', 'success');
+      showMessage('所有檔案已清除', 'success');
       loadFiles();
     } catch (error) {
-      showMessage('✗ 清除失敗', 'error');
+      showMessage('清除失敗', 'error');
     }
   };
 
   return (
     <div className="file-manager">
       <div className="file-manager-header">
-        <h2>📁 檔案管理</h2>
+        <h2>
+          <FiFolder aria-hidden /> 檔案管理
+        </h2>
         <div className="actions">
           <label className="upload-btn">
             <input
@@ -84,7 +95,7 @@ function FileManager({ onFilesChange }) {
               accept=".txt,.pdf,.doc,.docx"
               disabled={!!uploadProgress}
             />
-            ➕ 上傳檔案
+            <FiUpload aria-hidden /> 上傳檔案
           </label>
           {files.length > 0 && (
             <button
@@ -92,7 +103,7 @@ function FileManager({ onFilesChange }) {
               onClick={handleClearAll}
               disabled={isLoading}
             >
-              🗑️ 清除全部
+              <FiTrash2 aria-hidden /> 清除全部
             </button>
           )}
         </div>
@@ -100,7 +111,12 @@ function FileManager({ onFilesChange }) {
 
       {message && (
         <div className={`message-banner ${message.type}`}>
-          {message.text}
+          {message.type === 'success' ? (
+            <FiCheckCircle aria-hidden />
+          ) : (
+            <FiAlertCircle aria-hidden />
+          )}
+          <span>{message.text}</span>
         </div>
       )}
 
@@ -119,13 +135,17 @@ function FileManager({ onFilesChange }) {
           </div>
         ) : files.length === 0 ? (
           <div className="empty-state">
-            <p>📂 尚無已上傳的檔案</p>
+            <p>
+              <FiInbox aria-hidden /> 尚無已上傳的檔案
+            </p>
             <p className="hint">點擊「上傳檔案」開始使用</p>
           </div>
         ) : (
           files.map((file) => (
             <div key={file.name} className="file-item">
-              <div className="file-icon">📄</div>
+              <div className="file-icon">
+                <FiFileText aria-hidden />
+              </div>
               <div className="file-info">
                 <div className="file-name">{file.display_name}</div>
                 <div className="file-meta">
@@ -138,8 +158,9 @@ function FileManager({ onFilesChange }) {
                 className="delete-btn"
                 onClick={() => handleDelete(file.name)}
                 title="刪除檔案"
+                aria-label={`刪除 ${file.display_name}`}
               >
-                🗑️
+                <FiTrash2 aria-hidden />
               </button>
             </div>
           ))

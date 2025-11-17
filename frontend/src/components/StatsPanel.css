@@ -19,6 +19,9 @@
   margin: 0;
   color: #333;
   font-size: 22px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .refresh-btn {
@@ -29,6 +32,9 @@
   cursor: pointer;
   font-size: 16px;
   transition: all 0.3s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .refresh-btn:hover {
@@ -44,6 +50,12 @@
   justify-content: center;
   height: 100%;
   color: #999;
+}
+
+.stats-error p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .retry-btn {
@@ -122,6 +134,9 @@
   margin: 0 0 20px 0;
   color: #333;
   font-size: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .model-usage-list {
@@ -185,6 +200,12 @@
   background: white;
   border-top: 1px solid #e0e0e0;
   flex-shrink: 0;
+}
+
+.stats-footer p {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 /* Responsive */

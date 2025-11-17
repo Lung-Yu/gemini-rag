@@ -6,6 +6,13 @@ import StatsPanel from './components/StatsPanel';
 import QueryHistory from './components/QueryHistory';
 import { getHealth } from './services/api';
 import chatWebSocket from './services/websocket';
+import { FaRobot, FaHistory } from 'react-icons/fa';
+import {
+  FiCircle,
+  FiMessageSquare,
+  FiFolder,
+  FiBarChart2
+} from 'react-icons/fi';
 
 // TabPanel component
 function TabPanel({ children, value, index }) {
@@ -132,12 +139,17 @@ function App() {
   return (
     <div className="App">
       <header className="App-header">
-        <h1>🤖 Gemini RAG Chat</h1>
+        <h1>
+          <FaRobot aria-hidden /> Gemini RAG Chat
+        </h1>
         <div className="header-info">
           <span className={`status ${isHealthy ? 'online' : 'offline'}`}>
-            {isHealthy ? '● 在線' : '● 離線'}
+            <FiCircle aria-hidden className="status-icon" />
+            {isHealthy ? '在線' : '離線'}
           </span>
-          <span className="files-count">📁 {filesCount} 個檔案</span>
+          <span className="files-count">
+            <FiFolder aria-hidden /> {filesCount} 個檔案
+          </span>
           <div className="nav-buttons" role="tablist">
             <button 
               className={`nav-btn ${tabValue === 0 ? 'active' : ''}`}
@@ -147,8 +159,8 @@ function App() {
               aria-controls="tabpanel-0"
               id="tab-0"
             >
-              💬 聊天
-              {isLoading && tabValue !== 0 && <span className="loading-badge">●</span>}
+              <FiMessageSquare aria-hidden /> 聊天
+              {isLoading && tabValue !== 0 && <span className="loading-badge" aria-hidden="true"></span>}
             </button>
             <button 
               className={`nav-btn ${tabValue === 1 ? 'active' : ''}`}
@@ -158,7 +170,7 @@ function App() {
               aria-controls="tabpanel-1"
               id="tab-1"
             >
-              📁 檔案
+              <FiFolder aria-hidden /> 檔案
             </button>
             <button 
               className={`nav-btn ${tabValue === 2 ? 'active' : ''}`}
@@ -168,7 +180,7 @@ function App() {
               aria-controls="tabpanel-2"
               id="tab-2"
             >
-              📊 統計
+              <FiBarChart2 aria-hidden /> 統計
             </button>
             <button 
               className={`nav-btn ${tabValue === 3 ? 'active' : ''}`}
@@ -178,7 +190,7 @@ function App() {
               aria-controls="tabpanel-3"
               id="tab-3"
             >
-              📜 歷史
+              <FaHistory aria-hidden /> 歷史
             </button>
           </div>
         </div>

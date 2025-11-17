@@ -19,6 +19,9 @@
   margin: 0;
   color: #333;
   font-size: 22px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .actions {
@@ -35,7 +38,9 @@
   cursor: pointer;
   font-weight: 600;
   transition: all 0.3s ease;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .upload-btn:hover {
@@ -56,6 +61,9 @@
   cursor: pointer;
   font-weight: 600;
   transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .clear-btn:hover:not(:disabled) {
@@ -75,6 +83,9 @@
   padding: 15px 30px;
   font-weight: 500;
   animation: slideDown 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 @keyframes slideDown {
@@ -132,6 +143,12 @@
   font-size: 16px;
 }
 
+.empty-state p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .empty-state .hint {
   font-size: 14px;
   color: #bbb;
@@ -173,6 +190,9 @@
 .file-icon {
   font-size: 32px;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .file-info {
@@ -223,6 +243,9 @@
   font-size: 18px;
   transition: all 0.3s ease;
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .delete-btn:hover {

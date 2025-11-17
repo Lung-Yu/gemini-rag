@@ -1,6 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import './QueryHistory.css';
 import { getQueryHistory } from '../services/api';
+import {
+  FiBook,
+  FiRefreshCw,
+  FiInbox,
+  FiCheckCircle,
+  FiAlertCircle,
+  FiChevronsLeft,
+  FiChevronLeft,
+  FiChevronRight,
+  FiChevronsRight
+} from 'react-icons/fi';
 
 function QueryHistory() {
   const [history, setHistory] = useState([]);
@@ -65,18 +76,27 @@ function QueryHistory() {
   return (
     <div className="query-history">
       <div className="history-header">
-        <h2>📜 查詢歷史記錄</h2>
+        <h2>
+          <FiBook aria-hidden /> 查詢歷史記錄
+        </h2>
         <div className="history-info">
           <span>總計 {total} 筆記錄</span>
-          <button onClick={loadHistory} className="refresh-btn" title="重新整理">
-            🔄
+          <button 
+            onClick={loadHistory} 
+            className="refresh-btn" 
+            title="重新整理"
+            aria-label="重新整理查詢記錄"
+          >
+            <FiRefreshCw aria-hidden />
           </button>
         </div>
       </div>
 
       {history.length === 0 ? (
         <div className="empty-history">
-          <p>📭 尚無查詢記錄</p>
+          <p>
+            <FiInbox aria-hidden /> 尚無查詢記錄
+          </p>
         </div>
       ) : (
         <>
@@ -118,10 +138,12 @@ function QueryHistory() {
                     </td>
                     <td className="center-cell">
                       {item.success ? (
-                        <span className="status-success">✅ 成功</span>
+                        <span className="status-success">
+                          <FiCheckCircle aria-hidden /> 成功
+                        </span>
                       ) : (
                         <span className="status-error" title={item.error_message}>
-                          ❌ 失敗
+                          <FiAlertCircle aria-hidden /> 失敗
                         </span>
                       )}
                     </td>
@@ -139,14 +161,14 @@ function QueryHistory() {
                 disabled={currentPage === 1}
                 className="page-btn"
               >
-                ⏮️ 首頁
+                <FiChevronsLeft aria-hidden /> 首頁
               </button>
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
                 className="page-btn"
               >
-                ◀️ 上一頁
+                <FiChevronLeft aria-hidden /> 上一頁
               </button>
               <span className="page-info">
                 第 {currentPage} / {totalPages} 頁
@@ -156,14 +178,14 @@ function QueryHistory() {
                 disabled={currentPage === totalPages}
                 className="page-btn"
               >
-                下一頁 ▶️
+                下一頁 <FiChevronRight aria-hidden />
               </button>
               <button
                 onClick={() => handlePageChange(totalPages)}
                 disabled={currentPage === totalPages}
                 className="page-btn"
               >
-                末頁 ⏭️
+                末頁 <FiChevronsRight aria-hidden />
               </button>
             </div>
           )}
