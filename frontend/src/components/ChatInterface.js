@@ -3,10 +3,8 @@ import './ChatInterface.css';
 import { sendMessage, getAvailableModels, searchDocuments, listFiles } from '../services/api';
 import chatWebSocket from '../services/websocket';
 
-function ChatInterface() {
-  const [messages, setMessages] = useState([]);
+function ChatInterface({ messages, setMessages, isLoading, setIsLoading, wsConnected, wsConnecting }) {
   const [inputValue, setInputValue] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState(
     localStorage.getItem('preferredModel') || 'gemini-1.5-flash'
   );
@@ -18,8 +16,6 @@ function ChatInterface() {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [wsConnected, setWsConnected] = useState(false);
-  const [wsConnecting, setWsConnecting] = useState(false);
   
   // System Prompt States
   const [showSettings, setShowSettings] = useState(false);
@@ -42,76 +38,6 @@ function ChatInterface() {
     loadModels();
     loadFiles();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    const initWebSocket = async () => {
-      setWsConnecting(true);
-      try {
-        await chatWebSocket.connect();
-        setWsConnected(true);
-        
-        // 設置訊息處理器
-        const messageHandler = (data) => {
-          if (data.type === 'status') {
-            // 可以顯示狀態訊息
-            console.log('狀態:', data.message);
-          } else if (data.type === 'response') {
-            // 處理響應
-            const botMessage = {
-              id: Date.now() + 1,
-              text: data.message,
-              sender: 'bot',
-              timestamp: new Date(),
-              success: data.success,
-              filesUsed: data.files_used,
-              modelUsed: data.model_used,
-              promptTokens: data.prompt_tokens,
-              completionTokens: data.completion_tokens,
-              totalTokens: data.total_tokens,
-              isError: !data.success,
-            };
-            setMessages(prev => [...prev, botMessage]);
-            setIsLoading(false);
-            
-            // Clear file selection after query
-            setSelectedFiles([]);
-            setSearchResults([]);
-          } else if (data.type === 'error') {
-            // 處理錯誤
-            const errorMessage = {
-              id: Date.now() + 1,
-              text: data.message,
-              sender: 'bot',
-              timestamp: new Date(),
-              success: false,
-              isError: true,
-            };
-            setMessages(prev => [...prev, errorMessage]);
-            setIsLoading(false);
-          }
-        };
-        
-        chatWebSocket.onMessage(messageHandler);
-        
-        // 清理函數
-        return () => {
-          chatWebSocket.removeMessageHandler(messageHandler);
-        };
-        
-      } catch (error) {
-        console.error('WebSocket 連接失敗:', error);
-        setWsConnected(false);
-      } finally {
-        setWsConnecting(false);
-      }
-    };
-    
-    initWebSocket();
-    
-    return () => {
-      chatWebSocket.disconnect();
-    };
   }, []);
 
   const loadModels = async () => {
@@ -211,6 +137,16 @@ function ChatInterface() {
     );
   };
 
+  const handleClearChat = () => {
+    if (window.confirm('確定要清空所有對話嗎？')) {
+      setMessages([]);
+      setInputValue('');
+      setSelectedFiles([]);
+      setSearchResults([]);
+      setShowFileSelector(false);
+    }
+  };
+
   const handleSend = async () => {
     if (!inputValue.trim() || isLoading) return;
 
@@ -223,7 +159,14 @@ function ChatInterface() {
       selectedFilesCount: selectedFiles.length,
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    setMessages(prev => {
+      const newMessages = [...prev, userMessage];
+      // Limit to 20 messages with fade-out animation
+      if (newMessages.length > 20) {
+        return newMessages.slice(-20);
+      }
+      return newMessages;
+    });
     const queryText = inputValue;
     setInputValue('');
     setIsLoading(true);
@@ -254,6 +197,9 @@ function ChatInterface() {
           filesToUse.length > 0 ? filesToUse : null,
           systemPrompt || null
         );
+        // Clear file selection after query
+        setSelectedFiles([]);
+        setSearchResults([]);
       } else {
         // 降級到 HTTP POST
         const response = await sendMessage(
@@ -276,7 +222,13 @@ function ChatInterface() {
           totalTokens: response.total_tokens,
         };
 
-        setMessages(prev => [...prev, botMessage]);
+        setMessages(prev => {
+          const newMessages = [...prev, botMessage];
+          if (newMessages.length > 20) {
+            return newMessages.slice(-20);
+          }
+          return newMessages;
+        });
         setIsLoading(false);
         
         // Clear file selection after query
@@ -292,7 +244,13 @@ function ChatInterface() {
         success: false,
         isError: true,
       };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages(prev => {
+        const newMessages = [...prev, errorMessage];
+        if (newMessages.length > 20) {
+          return newMessages.slice(-20);
+        }
+        return newMessages;
+      });
       setIsLoading(false);
     }
   };
@@ -378,6 +336,16 @@ function ChatInterface() {
           title="系統提示詞設定"
         >
           ⚙️
+        </button>
+        
+        {/* Clear Chat Button */}
+        <button 
+          onClick={handleClearChat}
+          className="clear-btn"
+          title="清空對話"
+          disabled={messages.length === 0}
+        >
+          🔄
         </button>
         
         {/* WebSocket 連接狀態 */}

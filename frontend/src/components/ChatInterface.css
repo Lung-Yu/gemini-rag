@@ -2,6 +2,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  width: 100%;
   background: #fafafa;
 }
 
@@ -256,6 +257,22 @@
   }
   30% {
     opacity: 1;
+  }
+}
+
+/* Fade out animation for messages being removed */
+.message.fade-out {
+  animation: fadeOut 0.3s ease forwards;
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-20px);
   }
 }
 
@@ -661,6 +678,33 @@
   background: #f5f5ff;
   border-color: #667eea;
   transform: rotate(90deg);
+}
+
+.clear-btn {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: white;
+  color: #ff5722;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.3s;
+  border: 2px solid #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.clear-btn:hover:not(:disabled) {
+  background: #fff3e0;
+  border-color: #ff5722;
+  transform: rotate(180deg);
+}
+
+.clear-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 
 /* Responsive */
