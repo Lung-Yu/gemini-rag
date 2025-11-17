@@ -160,7 +160,7 @@ function FileManager({ onFilesChange }) {
                 title="刪除檔案"
                 aria-label={`刪除 ${file.display_name}`}
               >
-                <FiTrash2 aria-hidden />
+                <FiTrash2 aria-hidden /> 刪除
               </button>
             </div>
           ))

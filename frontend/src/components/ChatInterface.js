@@ -9,6 +9,7 @@ import {
   FiSave,
   FiAlertTriangle,
   FiRefreshCw,
+  FiTrash2,
   FiLoader,
   FiFolder,
   FiSmile,
@@ -378,7 +379,7 @@ function ChatInterface({ messages, setMessages, isLoading, setIsLoading, wsConne
           disabled={messages.length === 0}
           aria-label="清空對話"
         >
-          <FiRefreshCw aria-hidden />
+          <FiTrash2 aria-hidden /> 清空
         </button>
         
         {/* WebSocket 連接狀態 */}
