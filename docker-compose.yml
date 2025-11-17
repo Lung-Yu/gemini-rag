@@ -48,6 +48,8 @@ services:
       - "3000:80"
     environment:
       - REACT_APP_API_URL=http://localhost:8000
+      - GENERATE_SOURCEMAP=false
+      - TSC_COMPILE_ON_ERROR=true
     depends_on:
       - backend
     restart: unless-stopped
