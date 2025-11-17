@@ -3,12 +3,13 @@ import './App.css';
 import ChatInterface from './components/ChatInterface';
 import FileManager from './components/FileManager';
 import StatsPanel from './components/StatsPanel';
+import QueryHistory from './components/QueryHistory';
 import { getHealth } from './services/api';
 
 function App() {
   const [isHealthy, setIsHealthy] = useState(false);
   const [filesCount, setFilesCount] = useState(0);
-  const [currentView, setCurrentView] = useState('chat'); // 'chat', 'files', 'stats'
+  const [currentView, setCurrentView] = useState('chat'); // 'chat', 'files', 'stats', 'history'
 
   useEffect(() => {
     checkHealth();
@@ -53,6 +54,12 @@ function App() {
             >
               📊 統計
             </button>
+            <button 
+              className={`nav-btn ${currentView === 'history' ? 'active' : ''}`}
+              onClick={() => setCurrentView('history')}
+            >
+              📜 歷史
+            </button>
           </div>
         </div>
       </header>
@@ -61,6 +68,7 @@ function App() {
         {currentView === 'chat' && <ChatInterface />}
         {currentView === 'files' && <FileManager onFilesChange={checkHealth} />}
         {currentView === 'stats' && <StatsPanel />}
+        {currentView === 'history' && <QueryHistory />}
       </main>
 
       <footer className="App-footer">

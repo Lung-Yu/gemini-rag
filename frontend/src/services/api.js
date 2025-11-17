@@ -76,4 +76,12 @@ export const getStatistics = async () => {
   return response.data;
 };
 
+// Query History
+export const getQueryHistory = async (page = 1, pageSize = 50, order = 'desc') => {
+  const response = await api.get('/api/stats/history', {
+    params: { page, page_size: pageSize, order }
+  });
+  return response.data;
+};
+
 export default api;

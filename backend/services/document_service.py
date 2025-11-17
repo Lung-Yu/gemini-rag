@@ -263,3 +263,42 @@ class DocumentService:
         except Exception as e:
             print(f"❌ Error getting stats: {e}")
             return {}
+    
+    def get_query_history(
+        self,
+        page: int = 1,
+        page_size: int = 50,
+        order_by: str = 'desc'
+    ) -> dict:
+        """Get query history with pagination"""
+        try:
+            offset = (page - 1) * page_size
+            
+            # Get total count
+            total = self.db.query(func.count(QueryLog.id)).scalar()
+            
+            # Get paginated history
+            query = self.db.query(QueryLog)
+            
+            if order_by == 'desc':
+                query = query.order_by(QueryLog.created_at.desc())
+            else:
+                query = query.order_by(QueryLog.created_at.asc())
+            
+            history = query.offset(offset).limit(page_size).all()
+            
+            return {
+                'history': [log.to_dict() for log in history],
+                'total': total or 0,
+                'page': page,
+                'page_size': page_size
+            }
+        
+        except Exception as e:
+            print(f"❌ Error getting query history: {e}")
+            return {
+                'history': [],
+                'total': 0,
+                'page': page,
+                'page_size': page_size
+            }
