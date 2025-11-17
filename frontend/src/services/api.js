@@ -16,8 +16,18 @@ export const getHealth = async () => {
 };
 
 // Chat
-export const sendMessage = async (message) => {
-  const response = await api.post('/api/chat', { message });
+export const sendMessage = async (message, model = 'gemini-2.5-flash', selectedFiles = null) => {
+  const response = await api.post('/api/chat', { 
+    message, 
+    model,
+    selected_files: selectedFiles 
+  });
+  return response.data;
+};
+
+// Get available models
+export const getAvailableModels = async () => {
+  const response = await api.get('/api/chat/models');
   return response.data;
 };
 
@@ -46,6 +56,22 @@ export const deleteFile = async (fileName) => {
 
 export const clearAllFiles = async () => {
   const response = await api.delete('/api/files');
+  return response.data;
+};
+
+// Search
+export const searchDocuments = async (query, topK = 5, similarityThreshold = 0.7) => {
+  const response = await api.post('/api/search', { 
+    query, 
+    top_k: topK,
+    similarity_threshold: similarityThreshold 
+  });
+  return response.data;
+};
+
+// Statistics
+export const getStatistics = async () => {
+  const response = await api.get('/api/stats');
   return response.data;
 };
 

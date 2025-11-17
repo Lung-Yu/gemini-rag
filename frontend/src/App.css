@@ -51,21 +51,33 @@
   border-radius: 15px;
 }
 
-.toggle-files-btn {
-  padding: 8px 16px;
-  background: rgba(255, 255, 255, 0.9);
-  color: #667eea;
-  border: none;
-  border-radius: 20px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: all 0.3s ease;
+.nav-buttons {
+  display: flex;
+  gap: 8px;
   margin-left: auto;
 }
 
-.toggle-files-btn:hover {
-  background: white;
+.nav-btn {
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid transparent;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.nav-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
   transform: translateY(-2px);
+}
+
+.nav-btn.active {
+  background: white;
+  color: #667eea;
+  border-color: white;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
@@ -101,8 +113,14 @@
     gap: 10px;
   }
 
-  .toggle-files-btn {
+  .nav-buttons {
     margin-left: 0;
     width: 100%;
+  }
+
+  .nav-btn {
+    flex: 1;
+    font-size: 12px;
+    padding: 6px 12px;
   }
 }

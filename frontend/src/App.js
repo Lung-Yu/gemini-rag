@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import './App.css';
 import ChatInterface from './components/ChatInterface';
 import FileManager from './components/FileManager';
+import StatsPanel from './components/StatsPanel';
 import { getHealth } from './services/api';
 
 function App() {
   const [isHealthy, setIsHealthy] = useState(false);
   const [filesCount, setFilesCount] = useState(0);
-  const [showFiles, setShowFiles] = useState(false);
+  const [currentView, setCurrentView] = useState('chat'); // 'chat', 'files', 'stats'
 
   useEffect(() => {
     checkHealth();
@@ -33,25 +34,37 @@ function App() {
             {isHealthy ? '● 在線' : '● 離線'}
           </span>
           <span className="files-count">📁 {filesCount} 個檔案</span>
-          <button 
-            className="toggle-files-btn"
-            onClick={() => setShowFiles(!showFiles)}
-          >
-            {showFiles ? '隱藏檔案' : '管理檔案'}
-          </button>
+          <div className="nav-buttons">
+            <button 
+              className={`nav-btn ${currentView === 'chat' ? 'active' : ''}`}
+              onClick={() => setCurrentView('chat')}
+            >
+              💬 聊天
+            </button>
+            <button 
+              className={`nav-btn ${currentView === 'files' ? 'active' : ''}`}
+              onClick={() => setCurrentView('files')}
+            >
+              📁 檔案
+            </button>
+            <button 
+              className={`nav-btn ${currentView === 'stats' ? 'active' : ''}`}
+              onClick={() => setCurrentView('stats')}
+            >
+              📊 統計
+            </button>
+          </div>
         </div>
       </header>
 
       <main className="App-main">
-        {showFiles ? (
-          <FileManager onFilesChange={checkHealth} />
-        ) : (
-          <ChatInterface />
-        )}
+        {currentView === 'chat' && <ChatInterface />}
+        {currentView === 'files' && <FileManager onFilesChange={checkHealth} />}
+        {currentView === 'stats' && <StatsPanel />}
       </main>
 
       <footer className="App-footer">
-        <p>Powered by Google Gemini 2.5 Flash</p>
+        <p>Powered by Google Gemini with Vector Search & Multi-Model Support</p>
       </footer>
     </div>
   );

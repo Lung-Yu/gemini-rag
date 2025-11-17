@@ -1,4 +1,25 @@
 services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: gemini-rag-postgres
+    environment:
+      - POSTGRES_DB=gemini_rag
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+    networks:
+      - rag-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   backend:
     build:
       context: .
@@ -8,8 +29,12 @@ services:
       - "8000:8000"
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/gemini_rag
     volumes:
       - ./test-data:/app/test-data:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - rag-network
@@ -32,3 +57,6 @@ services:
 networks:
   rag-network:
     driver: bridge
+
+volumes:
+  postgres_data:

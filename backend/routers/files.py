@@ -1,17 +1,23 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
+from sqlalchemy.orm import Session
 from backend.models.schemas import FileListResponse, FileInfo, UploadResponse, DeleteResponse
 from backend.services.rag_service import RAGService
+from backend.services.embedding_service import EmbeddingService
+from backend.services.document_service import DocumentService
+from backend.database.connection import get_db
 import os
 import tempfile
 
 router = APIRouter(prefix="/api/files", tags=["files"])
 
-# Initialize RAG service
+# Initialize services - now using global instances
+from backend.services.rag_service import rag_service
+
 API_KEY = os.environ.get('GOOGLE_API_KEY')
 if not API_KEY:
     raise ValueError("GOOGLE_API_KEY environment variable is not set")
 
-rag_service = RAGService(API_KEY)
+embedding_service = EmbeddingService()
 
 
 @router.get("", response_model=FileListResponse)
@@ -25,41 +31,52 @@ async def list_files():
 
 
 @router.post("/upload", response_model=UploadResponse)
-async def upload_file(file: UploadFile = File(...)):
-    """Upload a file to RAG system"""
+async def upload_file(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    """Upload a file to RAG system and index it"""
     try:
+        # Read file content
+        content = await file.read()
+        content_text = content.decode('utf-8', errors='ignore')
+        
         # Save uploaded file temporarily
         with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as tmp_file:
-            content = await file.read()
             tmp_file.write(content)
             tmp_file_path = tmp_file.name
         
         # Upload to Gemini
         result = rag_service.upload_file(tmp_file_path)
         
+        # Index document in database with embedding
+        doc_service = DocumentService(db, embedding_service)
+        doc_service.create_document(
+            gemini_file_name=result['name'],
+            display_name=result['display_name'],
+            content=content_text,
+            file_size=len(content)
+        )
+        
         # Clean up temp file
         os.unlink(tmp_file_path)
         
         return UploadResponse(
             success=True,
-            message="檔案上傳成功",
-            file=FileInfo(**result)
+            message="檔案上傳並索引成功",
+            file_name=result['name']
         )
     except Exception as e:
-        # Clean up temp file on error
-        if 'tmp_file_path' in locals():
-            try:
-                os.unlink(tmp_file_path)
-            except:
-                pass
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.delete("/{file_name}", response_model=DeleteResponse)
-async def delete_file(file_name: str):
-    """Delete a file from RAG system"""
+async def delete_file(file_name: str, db: Session = Depends(get_db)):
+    """Delete a file from RAG system and database"""
     try:
+        # Delete from Gemini
         success = rag_service.delete_file(file_name)
+        
+        # Delete from database
+        doc_service = DocumentService(db, embedding_service)
+        doc_service.delete_document(file_name)
+        
         if success:
             return DeleteResponse(success=True, message="檔案已刪除")
         else:
