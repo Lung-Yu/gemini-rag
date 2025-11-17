@@ -48,3 +48,11 @@ $$ language 'plpgsql';
 -- Create trigger for documents table
 CREATE TRIGGER update_documents_updated_at BEFORE UPDATE ON documents
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Add token usage columns to query_logs (migration)
+ALTER TABLE query_logs ADD COLUMN IF NOT EXISTS prompt_tokens INTEGER;
+ALTER TABLE query_logs ADD COLUMN IF NOT EXISTS completion_tokens INTEGER;
+ALTER TABLE query_logs ADD COLUMN IF NOT EXISTS total_tokens INTEGER;
+
+-- Create index for token statistics
+CREATE INDEX IF NOT EXISTS query_logs_total_tokens_idx ON query_logs(total_tokens) WHERE total_tokens IS NOT NULL;

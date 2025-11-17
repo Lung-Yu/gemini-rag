@@ -66,6 +66,9 @@ function ChatInterface() {
               success: data.success,
               filesUsed: data.files_used,
               modelUsed: data.model_used,
+              promptTokens: data.prompt_tokens,
+              completionTokens: data.completion_tokens,
+              totalTokens: data.total_tokens,
               isError: !data.success,
             };
             setMessages(prev => [...prev, botMessage]);
@@ -268,6 +271,9 @@ function ChatInterface() {
           success: response.success,
           filesUsed: response.files_used,
           modelUsed: response.model_used,
+          promptTokens: response.prompt_tokens,
+          completionTokens: response.completion_tokens,
+          totalTokens: response.total_tokens,
         };
 
         setMessages(prev => [...prev, botMessage]);
@@ -426,6 +432,9 @@ function ChatInterface() {
                 )}
                 {message.selectedFilesCount > 0 && (
                   <span>🎯 選定 {message.selectedFilesCount} 個</span>
+                )}
+                {message.promptTokens !== undefined && message.completionTokens !== undefined && (
+                  <span>📋 輸入: {message.promptTokens} | 輸出: {message.completionTokens} tokens</span>
                 )}
               </div>
               <div className="message-time">

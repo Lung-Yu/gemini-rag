@@ -91,6 +91,24 @@ function StatsPanel() {
             <div className="stat-value">{stats.successful_queries}</div>
           </div>
         </div>
+
+        {/* Total Tokens Used */}
+        <div className="stat-card">
+          <div className="stat-icon">🎫</div>
+          <div className="stat-content">
+            <div className="stat-label">總 Token 使用量</div>
+            <div className="stat-value">{stats.total_tokens_used?.toLocaleString() || 0}</div>
+          </div>
+        </div>
+
+        {/* Average Tokens per Query */}
+        <div className="stat-card">
+          <div className="stat-icon">📊</div>
+          <div className="stat-content">
+            <div className="stat-label">平均 Token 數</div>
+            <div className="stat-value">{stats.avg_tokens_per_query?.toFixed(0) || 0}</div>
+          </div>
+        </div>
       </div>
 
       {/* Model Usage */}

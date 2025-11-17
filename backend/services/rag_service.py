@@ -218,13 +218,24 @@ class RAGService:
                 )
             )
             
+            # Extract token usage from response
+            prompt_tokens = 0
+            completion_tokens = 0
+            total_tokens = 0
+            if hasattr(response, 'usage_metadata'):
+                prompt_tokens = getattr(response.usage_metadata, 'prompt_token_count', 0)
+                completion_tokens = getattr(response.usage_metadata, 'candidates_token_count', 0)
+                total_tokens = getattr(response.usage_metadata, 'total_token_count', 0)
+            
             return {
                 'success': True,
                 'response': response.text,
                 'model_used': model_name,
                 'files_used': files_used,
                 'system_prompt_used': system_prompt if system_prompt else default_system_prompt.format(query=query),
-                'token_count': response.usage_metadata.total_token_count if hasattr(response, 'usage_metadata') else 0
+                'prompt_tokens': prompt_tokens,
+                'completion_tokens': completion_tokens,
+                'total_tokens': total_tokens
             }
             
         except Exception as e:

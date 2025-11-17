@@ -41,6 +41,9 @@ class QueryLog(Base):
     selected_files = Column(ARRAY(Text))
     system_prompt_used = Column(Text)
     response_length = Column(Integer)
+    prompt_tokens = Column(Integer)
+    completion_tokens = Column(Integer)
+    total_tokens = Column(Integer)
     success = Column(Boolean, default=True)
     error_message = Column(Text)
     created_at = Column(TIMESTAMP, server_default=func.now(), index=True)
@@ -55,6 +58,9 @@ class QueryLog(Base):
             'selected_files': self.selected_files,
             'system_prompt_used': self.system_prompt_used,
             'response_length': self.response_length,
+            'prompt_tokens': self.prompt_tokens,
+            'completion_tokens': self.completion_tokens,
+            'total_tokens': self.total_tokens,
             'success': self.success,
             'error_message': self.error_message,
             'created_at': self.created_at.isoformat() if self.created_at else None

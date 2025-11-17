@@ -189,6 +189,9 @@ class DocumentService:
         selected_files: Optional[List[str]] = None,
         system_prompt_used: Optional[str] = None,
         response_length: Optional[int] = None,
+        prompt_tokens: Optional[int] = None,
+        completion_tokens: Optional[int] = None,
+        total_tokens: Optional[int] = None,
         success: bool = True,
         error_message: Optional[str] = None
     ) -> Optional[QueryLog]:
@@ -201,6 +204,9 @@ class DocumentService:
                 selected_files=selected_files or [],
                 system_prompt_used=system_prompt_used,
                 response_length=response_length,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                total_tokens=total_tokens,
                 success=success,
                 error_message=error_message
             )
@@ -235,12 +241,23 @@ class DocumentService:
             # Average files used
             avg_files = self.db.query(func.avg(QueryLog.files_used)).scalar()
             
+            # Token usage stats (only count queries with token data)
+            total_tokens = self.db.query(func.sum(QueryLog.total_tokens)).filter(
+                QueryLog.total_tokens.isnot(None)
+            ).scalar()
+            
+            avg_tokens = self.db.query(func.avg(QueryLog.total_tokens)).filter(
+                QueryLog.total_tokens.isnot(None)
+            ).scalar()
+            
             return {
                 'total_queries': total_queries or 0,
                 'successful_queries': successful or 0,
                 'success_rate': (successful / total_queries * 100) if total_queries > 0 else 0,
                 'model_usage': {model: count for model, count in model_stats},
-                'avg_files_used': float(avg_files) if avg_files else 0
+                'avg_files_used': float(avg_files) if avg_files else 0,
+                'total_tokens_used': int(total_tokens) if total_tokens else 0,
+                'avg_tokens_per_query': float(avg_tokens) if avg_tokens else 0
             }
         
         except Exception as e:

@@ -54,6 +54,9 @@ async def chat(request: ChatRequest, db: Session = Depends(get_db)):
             selected_files=request.selected_files,
             system_prompt_used=result.get("system_prompt_used"),
             response_length=len(result.get("response", "")) if result.get("response") else 0,
+            prompt_tokens=result.get("prompt_tokens"),
+            completion_tokens=result.get("completion_tokens"),
+            total_tokens=result.get("total_tokens"),
             success=result["success"],
             error_message=result.get("message") if not result["success"] else None
         )
@@ -71,20 +74,10 @@ async def chat(request: ChatRequest, db: Session = Depends(get_db)):
         response=result.get("response", ""),
         model_used=result.get("model_used"),
         files_used=result.get("files_used", 0),
-        token_count=result.get("token_count", 0)
+        prompt_tokens=result.get("prompt_tokens"),
+        completion_tokens=result.get("completion_tokens"),
+        total_tokens=result.get("total_tokens")
     )
-    
-    # Map response to message field for ChatResponse
-    response_data = {
-        "success": result["success"],
-        "message": result.get("response", result.get("error", "No response")),
-        "response": result.get("response"),
-        "files_used": result.get("files_used", 0),
-        "model_used": result.get("model_used"),
-        "error_type": result.get("error_type")
-    }
-    
-    return ChatResponse(**response_data)
 
 
 @router.get("/models", response_model=ModelsResponse)
@@ -156,7 +149,10 @@ async def websocket_chat(websocket: WebSocket):
                             files_used=result.get('files_used', 0),
                             selected_files=selected_files,
                             system_prompt_used=result.get('system_prompt_used'),
-                            response_length=len(result.get('response', ''))
+                            response_length=len(result.get('response', '')),
+                            prompt_tokens=result.get('prompt_tokens'),
+                            completion_tokens=result.get('completion_tokens'),
+                            total_tokens=result.get('total_tokens')
                         )
                     except Exception as log_error:
                         print(f"⚠️ 記錄查詢失敗: {log_error}")
@@ -167,7 +163,10 @@ async def websocket_chat(websocket: WebSocket):
                         'success': True,
                         'message': result['response'],
                         'model_used': result.get('model_used', model),
-                        'files_used': result.get('files_used', 0)
+                        'files_used': result.get('files_used', 0),
+                        'prompt_tokens': result.get('prompt_tokens'),
+                        'completion_tokens': result.get('completion_tokens'),
+                        'total_tokens': result.get('total_tokens')
                     })
                 else:
                     # Log failed query
