@@ -36,11 +36,12 @@ async def chat(request: ChatRequest, db: Session = Depends(get_db)):
             detail=f"不支持的模型: {request.model}。請從模型列表中選擇可用的模型。"
         )
     
-    # Query with specified model and files
+    # Query with specified model, files, and system prompt
     result = rag_service.query(
         query=request.message,
         model_name=request.model,
-        selected_file_names=request.selected_files
+        selected_file_names=request.selected_files,
+        system_prompt=request.system_prompt
     )
     
     # Log the query
@@ -51,6 +52,7 @@ async def chat(request: ChatRequest, db: Session = Depends(get_db)):
             model_used=result.get("model_used", request.model),
             files_used=result.get("files_used", 0),
             selected_files=request.selected_files,
+            system_prompt_used=result.get("system_prompt_used"),
             response_length=len(result.get("response", "")) if result.get("response") else 0,
             success=result["success"],
             error_message=result.get("message") if not result["success"] else None
@@ -120,6 +122,7 @@ async def websocket_chat(websocket: WebSocket):
             message = request_data.get('message', '').strip()
             model = request_data.get('model', 'gemini-1.5-flash')
             selected_files = request_data.get('selected_files', None)
+            system_prompt = request_data.get('system_prompt', None)
             
             if not message:
                 await websocket.send_json({
@@ -135,11 +138,12 @@ async def websocket_chat(websocket: WebSocket):
                     'message': '正在處理您的請求...'
                 })
                 
-                # Query with specified model and files
+                # Query with specified model, files, and system prompt
                 result = rag_service.query(
                     query=message,
                     model_name=model,
-                    selected_file_names=selected_files
+                    selected_file_names=selected_files,
+                    system_prompt=system_prompt
                 )
                 
                 if result['success']:
@@ -151,6 +155,7 @@ async def websocket_chat(websocket: WebSocket):
                             success=True,
                             files_used=result.get('files_used', 0),
                             selected_files=selected_files,
+                            system_prompt_used=result.get('system_prompt_used'),
                             response_length=len(result.get('response', ''))
                         )
                     except Exception as log_error:
@@ -173,6 +178,7 @@ async def websocket_chat(websocket: WebSocket):
                             success=False,
                             files_used=0,
                             selected_files=selected_files,
+                            system_prompt_used=result.get('system_prompt_used'),
                             error_message=result.get('error', 'Unknown error')
                         )
                     except Exception as log_error:

@@ -65,12 +65,13 @@ class ChatWebSocket {
     }
   }
 
-  sendMessage(message, model, selectedFiles) {
+  sendMessage(message, model, selectedFiles, systemPrompt = null) {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       const data = {
         message,
         model,
-        selected_files: selectedFiles
+        selected_files: selectedFiles,
+        system_prompt: systemPrompt
       };
       this.ws.send(JSON.stringify(data));
     } else {

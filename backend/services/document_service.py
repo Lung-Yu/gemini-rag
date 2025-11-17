@@ -187,6 +187,7 @@ class DocumentService:
         model_used: str,
         files_used: int = 0,
         selected_files: Optional[List[str]] = None,
+        system_prompt_used: Optional[str] = None,
         response_length: Optional[int] = None,
         success: bool = True,
         error_message: Optional[str] = None
@@ -198,6 +199,7 @@ class DocumentService:
                 model_used=model_used,
                 files_used=files_used,
                 selected_files=selected_files or [],
+                system_prompt_used=system_prompt_used,
                 response_length=response_length,
                 success=success,
                 error_message=error_message

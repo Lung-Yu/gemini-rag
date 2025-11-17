@@ -16,11 +16,12 @@ export const getHealth = async () => {
 };
 
 // Chat
-export const sendMessage = async (message, model = 'gemini-2.5-flash', selectedFiles = null) => {
+export const sendMessage = async (message, model = 'gemini-2.5-flash', selectedFiles = null, systemPrompt = null) => {
   const response = await api.post('/api/chat', { 
     message, 
     model,
-    selected_files: selectedFiles 
+    selected_files: selectedFiles,
+    system_prompt: systemPrompt
   });
   return response.data;
 };

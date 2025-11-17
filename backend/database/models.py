@@ -39,6 +39,7 @@ class QueryLog(Base):
     model_used = Column(String(100), nullable=False, index=True)
     files_used = Column(Integer, default=0)
     selected_files = Column(ARRAY(Text))
+    system_prompt_used = Column(Text)
     response_length = Column(Integer)
     success = Column(Boolean, default=True)
     error_message = Column(Text)
@@ -52,6 +53,7 @@ class QueryLog(Base):
             'model_used': self.model_used,
             'files_used': self.files_used,
             'selected_files': self.selected_files,
+            'system_prompt_used': self.system_prompt_used,
             'response_length': self.response_length,
             'success': self.success,
             'error_message': self.error_message,

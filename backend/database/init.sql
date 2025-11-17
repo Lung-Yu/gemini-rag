@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS query_logs (
     model_used VARCHAR(100) NOT NULL,
     files_used INTEGER DEFAULT 0,
     selected_files TEXT[],
+    system_prompt_used TEXT,
     response_length INTEGER,
     success BOOLEAN DEFAULT TRUE,
     error_message TEXT,

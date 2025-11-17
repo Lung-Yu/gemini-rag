@@ -20,6 +20,14 @@ function ChatInterface() {
   const [isSearching, setIsSearching] = useState(false);
   const [wsConnected, setWsConnected] = useState(false);
   const [wsConnecting, setWsConnecting] = useState(false);
+  
+  // System Prompt States
+  const [showSettings, setShowSettings] = useState(false);
+  const [systemPrompt, setSystemPrompt] = useState(
+    localStorage.getItem('systemPrompt') || '基於提供的文件內容，請回答以下問題：\n\n{query}\n\n如果文件中沒有相關信息，請明確說明並提供一般性的回答。'
+  );
+  const [tempSystemPrompt, setTempSystemPrompt] = useState(systemPrompt);
+  
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -157,6 +165,22 @@ function ChatInterface() {
     localStorage.setItem('preferredModel', model);
   };
 
+  const handleSaveSystemPrompt = () => {
+    setSystemPrompt(tempSystemPrompt);
+    localStorage.setItem('systemPrompt', tempSystemPrompt);
+    setShowSettings(false);
+  };
+
+  const handleResetSystemPrompt = () => {
+    const defaultPrompt = '基於提供的文件內容，請回答以下問題：\n\n{query}\n\n如果文件中沒有相關信息，請明確說明並提供一般性的回答。';
+    setTempSystemPrompt(defaultPrompt);
+  };
+
+  const handleUseEnglishTemplate = () => {
+    const englishPrompt = 'Based on the provided document content, please answer the following question:\n\n{query}\n\nIf there is no relevant information in the documents, please clearly state that and provide a general answer.';
+    setTempSystemPrompt(englishPrompt);
+  };
+
   const handleSearchFiles = async () => {
     if (!inputValue.trim()) return;
     
@@ -224,14 +248,16 @@ function ChatInterface() {
         chatWebSocket.sendMessage(
           queryText,
           selectedModel,
-          filesToUse.length > 0 ? filesToUse : null
+          filesToUse.length > 0 ? filesToUse : null,
+          systemPrompt || null
         );
       } else {
         // 降級到 HTTP POST
         const response = await sendMessage(
           queryText,
           selectedModel,
-          filesToUse.length > 0 ? filesToUse : null
+          filesToUse.length > 0 ? filesToUse : null,
+          systemPrompt || null
         );
         
         const botMessage = {
@@ -274,6 +300,47 @@ function ChatInterface() {
 
   return (
     <div className="chat-interface">
+      {/* Settings Panel */}
+      {showSettings && (
+        <div className="settings-overlay">
+          <div className="settings-panel">
+            <div className="settings-header">
+              <h3>⚙️ 系統提示詞設定</h3>
+              <button onClick={() => setShowSettings(false)} className="close-btn">✕</button>
+            </div>
+            <div className="settings-content">
+              <div className="setting-group">
+                <label>系統提示詞：</label>
+                <p className="setting-description">
+                  自訂 AI 的行為模式。使用 <code>{`{query}`}</code> 作為問題佔位符。
+                </p>
+                <textarea
+                  value={tempSystemPrompt}
+                  onChange={(e) => setTempSystemPrompt(e.target.value)}
+                  rows="8"
+                  className="system-prompt-input"
+                  placeholder="輸入系統提示詞..."
+                />
+                <div className="char-counter">
+                  {tempSystemPrompt.length} 字元
+                </div>
+              </div>
+              <div className="settings-actions">
+                <button onClick={handleResetSystemPrompt} className="secondary-btn">
+                  重置為預設（中文）
+                </button>
+                <button onClick={handleUseEnglishTemplate} className="secondary-btn">
+                  使用英文範本
+                </button>
+                <button onClick={handleSaveSystemPrompt} className="primary-btn">
+                  💾 儲存設定
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Model Selector */}
       <div className="model-selector-bar">
         <div className="model-selector">
@@ -294,6 +361,18 @@ function ChatInterface() {
             </select>
           )}
         </div>
+        
+        {/* Settings Button */}
+        <button 
+          onClick={() => {
+            setTempSystemPrompt(systemPrompt);
+            setShowSettings(true);
+          }} 
+          className="settings-btn"
+          title="系統提示詞設定"
+        >
+          ⚙️
+        </button>
         
         {/* WebSocket 連接狀態 */}
         <div className="ws-status">

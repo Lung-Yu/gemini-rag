@@ -168,9 +168,10 @@ class RAGService:
     def query(self, 
               query: str, 
               model_name: str = None, 
-              selected_file_names: List[str] = None, 
+              selected_file_names: List[str] = None,
+              system_prompt: str = None,
               max_output_tokens: int = 8192) -> dict:
-        """Query the model with optional file context"""
+        """Query the model with optional file context and custom system prompt"""
         if not model_name:
             model_name = self.DEFAULT_MODEL
         
@@ -198,14 +199,15 @@ class RAGService:
                         prompt_parts.append(file_obj)
                         files_used += 1
             
-            # Add the actual query
-            prompt_parts.append(f"""
-基於提供的文件內容，請回答以下問題：
+            # Add the actual query with custom or default system prompt
+            default_system_prompt = """基於提供的文件內容，請回答以下問題：
 
 {query}
 
-如果文件中沒有相關信息，請明確說明並提供一般性的回答。
-""")
+如果文件中沒有相關信息，請明確說明並提供一般性的回答。"""
+            
+            final_prompt = system_prompt if system_prompt else default_system_prompt
+            prompt_parts.append(final_prompt.format(query=query))
             
             # Generate response
             response = model.generate_content(
@@ -221,6 +223,7 @@ class RAGService:
                 'response': response.text,
                 'model_used': model_name,
                 'files_used': files_used,
+                'system_prompt_used': system_prompt if system_prompt else default_system_prompt.format(query=query),
                 'token_count': response.usage_metadata.total_token_count if hasattr(response, 'usage_metadata') else 0
             }
             
