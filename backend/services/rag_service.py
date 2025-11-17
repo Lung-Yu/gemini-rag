@@ -117,6 +117,7 @@ class RAGService:
                 {
                     'name': file.name,
                     'display_name': file.display_name,
+                    'uri': file.uri if hasattr(file, 'uri') else None,
                     'size_bytes': file.size_bytes,
                     'create_time': file.create_time.isoformat() if file.create_time else None,
                     'state': file.state.name if hasattr(file.state, 'name') else str(file.state)
@@ -138,8 +139,10 @@ class RAGService:
             return {
                 'name': uploaded_file.name,
                 'display_name': uploaded_file.display_name,
+                'uri': uploaded_file.uri if hasattr(uploaded_file, 'uri') else None,
                 'size_bytes': uploaded_file.size_bytes,
-                'create_time': uploaded_file.create_time.isoformat() if uploaded_file.create_time else None
+                'create_time': uploaded_file.create_time.isoformat() if uploaded_file.create_time else None,
+                'state': uploaded_file.state.name if hasattr(uploaded_file.state, 'name') else 'ACTIVE'
             }
         except Exception as e:
             raise Exception(f"Failed to upload file: {e}")

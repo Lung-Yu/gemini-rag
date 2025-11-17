@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './ChatInterface.css';
 import { sendMessage, getAvailableModels, searchDocuments, listFiles } from '../services/api';
+import chatWebSocket from '../services/websocket';
 
 function ChatInterface() {
   const [messages, setMessages] = useState([]);
@@ -17,6 +18,8 @@ function ChatInterface() {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [wsConnected, setWsConnected] = useState(false);
+  const [wsConnecting, setWsConnecting] = useState(false);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -31,6 +34,73 @@ function ChatInterface() {
     loadModels();
     loadFiles();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const initWebSocket = async () => {
+      setWsConnecting(true);
+      try {
+        await chatWebSocket.connect();
+        setWsConnected(true);
+        
+        // 設置訊息處理器
+        const messageHandler = (data) => {
+          if (data.type === 'status') {
+            // 可以顯示狀態訊息
+            console.log('狀態:', data.message);
+          } else if (data.type === 'response') {
+            // 處理響應
+            const botMessage = {
+              id: Date.now() + 1,
+              text: data.message,
+              sender: 'bot',
+              timestamp: new Date(),
+              success: data.success,
+              filesUsed: data.files_used,
+              modelUsed: data.model_used,
+              isError: !data.success,
+            };
+            setMessages(prev => [...prev, botMessage]);
+            setIsLoading(false);
+            
+            // Clear file selection after query
+            setSelectedFiles([]);
+            setSearchResults([]);
+          } else if (data.type === 'error') {
+            // 處理錯誤
+            const errorMessage = {
+              id: Date.now() + 1,
+              text: data.message,
+              sender: 'bot',
+              timestamp: new Date(),
+              success: false,
+              isError: true,
+            };
+            setMessages(prev => [...prev, errorMessage]);
+            setIsLoading(false);
+          }
+        };
+        
+        chatWebSocket.onMessage(messageHandler);
+        
+        // 清理函數
+        return () => {
+          chatWebSocket.removeMessageHandler(messageHandler);
+        };
+        
+      } catch (error) {
+        console.error('WebSocket 連接失敗:', error);
+        setWsConnected(false);
+      } finally {
+        setWsConnecting(false);
+      }
+    };
+    
+    initWebSocket();
+    
+    return () => {
+      chatWebSocket.disconnect();
+    };
   }, []);
 
   const loadModels = async () => {
@@ -132,28 +202,55 @@ function ChatInterface() {
     setIsLoading(true);
     setShowFileSelector(false);
 
-    try {
-      const response = await sendMessage(
-        queryText,
-        selectedModel,
-        selectedFiles.length > 0 ? selectedFiles : null
-      );
-      
-      const botMessage = {
-        id: Date.now() + 1,
-        text: response.response || response.message,
-        sender: 'bot',
-        timestamp: new Date(),
-        success: response.success,
-        filesUsed: response.files_used,
-        modelUsed: response.model_used,
-      };
+    // Auto-use all files if none selected
+    let filesToUse = selectedFiles;
+    if (filesToUse.length === 0) {
+      try {
+        // Get all available files from Gemini
+        const filesData = await listFiles();
+        if (filesData.files && filesData.files.length > 0) {
+          // Use all files
+          filesToUse = filesData.files.map(f => f.name);
+          console.log(`📁 自動使用 ${filesToUse.length} 個檔案`);
+        }
+      } catch (error) {
+        console.error('自動載入檔案失敗:', error);
+      }
+    }
 
-      setMessages(prev => [...prev, botMessage]);
-      
-      // Clear file selection after query
-      setSelectedFiles([]);
-      setSearchResults([]);
+    try {
+      if (wsConnected) {
+        // 使用 WebSocket 發送訊息
+        chatWebSocket.sendMessage(
+          queryText,
+          selectedModel,
+          filesToUse.length > 0 ? filesToUse : null
+        );
+      } else {
+        // 降級到 HTTP POST
+        const response = await sendMessage(
+          queryText,
+          selectedModel,
+          filesToUse.length > 0 ? filesToUse : null
+        );
+        
+        const botMessage = {
+          id: Date.now() + 1,
+          text: response.response || response.message,
+          sender: 'bot',
+          timestamp: new Date(),
+          success: response.success,
+          filesUsed: response.files_used,
+          modelUsed: response.model_used,
+        };
+
+        setMessages(prev => [...prev, botMessage]);
+        setIsLoading(false);
+        
+        // Clear file selection after query
+        setSelectedFiles([]);
+        setSearchResults([]);
+      }
     } catch (error) {
       const errorMessage = {
         id: Date.now() + 1,
@@ -164,7 +261,6 @@ function ChatInterface() {
         isError: true,
       };
       setMessages(prev => [...prev, errorMessage]);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -196,6 +292,17 @@ function ChatInterface() {
                 </option>
               ))}
             </select>
+          )}
+        </div>
+        
+        {/* WebSocket 連接狀態 */}
+        <div className="ws-status">
+          {wsConnecting ? (
+            <span className="ws-connecting">⏳ 連接中...</span>
+          ) : wsConnected ? (
+            <span className="ws-connected">🟢 即時連接</span>
+          ) : (
+            <span className="ws-disconnected">🔴 標準模式</span>
           )}
         </div>
         {selectedFiles.length > 0 && (

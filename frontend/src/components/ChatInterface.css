@@ -67,6 +67,29 @@
   cursor: help;
 }
 
+/* WebSocket Status */
+.ws-status {
+  padding: 6px 12px;
+  border-radius: 15px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ws-connected {
+  color: #4caf50;
+  background: #e8f5e9;
+}
+
+.ws-connecting {
+  color: #ff9800;
+  background: #fff3e0;
+}
+
+.ws-disconnected {
+  color: #f44336;
+  background: #ffebee;
+}
+
 .messages-container {
   flex: 1;
   overflow-y: auto;

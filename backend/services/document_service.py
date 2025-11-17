@@ -122,6 +122,14 @@ class DocumentService:
             Document.gemini_file_name == gemini_file_name
         ).first()
     
+    def get_document_by_gemini_name(self, gemini_file_name: str) -> Optional[Document]:
+        """Alias for get_document_by_name"""
+        return self.get_document_by_name(gemini_file_name)
+    
+    def get_document_count(self) -> int:
+        """Get total number of documents"""
+        return self.db.query(func.count(Document.id)).scalar() or 0
+    
     def list_documents(self, limit: int = 100, offset: int = 0) -> List[Document]:
         """List all documents with pagination"""
         return self.db.query(Document).offset(offset).limit(limit).all()
