@@ -3,8 +3,8 @@
 import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import {
   FiUpload, FiFile, FiTrash2, FiRefreshCw,
-  FiSearch, FiGrid, FiList, FiFolderPlus,
-  FiDownload, FiEye, FiFilter, FiClock, FiFileText, FiDatabase, FiCheckCircle, FiAlertCircle
+  FiSearch, FiFolderPlus,
+  FiDownload, FiEye, FiFilter, FiClock, FiFileText, FiDatabase, FiCheckCircle, FiAlertCircle, FiChevronLeft, FiChevronRight
 } from 'react-icons/fi';
 
 import { useFileManager } from '../hooks/useFileManager';
@@ -16,9 +16,10 @@ import type { FileInfo } from '../types';
 
 import './FileManager.css';
 
-type ViewMode = 'grid' | 'list';
 type SortBy = 'name' | 'size' | 'created_at' | 'type';
 type SortOrder = 'asc' | 'desc';
+
+const ITEMS_PER_PAGE = 10;
 
 export function FileManager() {
   // Hooks
@@ -42,11 +43,11 @@ export function FileManager() {
   // Local state
   const [isDragOver, setIsDragOver] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<SortBy>('created_at');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [showUploadArea, setShowUploadArea] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Refs
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -94,6 +95,19 @@ export function FileManager() {
 
     return filtered;
   }, [files, searchTerm, sortBy, sortOrder]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredAndSortedFiles.length / ITEMS_PER_PAGE);
+  const paginatedFiles = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return filteredAndSortedFiles.slice(startIndex, endIndex);
+  }, [filteredAndSortedFiles, currentPage]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, sortBy, sortOrder]);
 
   // Statistics
   const stats = useMemo(() => {
@@ -331,25 +345,6 @@ export function FileManager() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-
-          <div className="view-toggle">
-            <Button
-              variant={viewMode === 'grid' ? 'primary' : 'secondary'}
-              size="small"
-              onClick={() => setViewMode('grid')}
-              aria-label="網格檢視"
-            >
-              <FiGrid />
-            </Button>
-            <Button
-              variant={viewMode === 'list' ? 'primary' : 'secondary'}
-              size="small"
-              onClick={() => setViewMode('list')}
-              aria-label="清單檢視"
-            >
-              <FiList />
-            </Button>
-          </div>
         </div>
 
         <div className="bulk-actions">
@@ -380,8 +375,8 @@ export function FileManager() {
         </div>
       </div>
 
-      {/* File List */}
-      <div className="file-list-container">
+      {/* File Table */}
+      <div className="file-table-container">
         {isLoading ? (
           <div className="loading-container">
             <LoadingSpinner />
@@ -405,98 +400,49 @@ export function FileManager() {
           />
         ) : (
           <>
-            {/* Sort Header (for list view) */}
-            {viewMode === 'list' && (
-              <div className="sort-header">
-                <div className="sort-item checkbox-column">
-                  <input
-                    type="checkbox"
-                    checked={selectedFiles.size === filteredAndSortedFiles.length}
-                    onChange={handleSelectAll}
-                  />
-                </div>
-                <div className="sort-item name-column" onClick={() => handleSortChange('name')}>
-                  檔案名稱 {sortBy === 'name' && (sortOrder === 'desc' ? '↓' : '↑')}
-                </div>
-                <div className="sort-item type-column" onClick={() => handleSortChange('type')}>
-                  類型 {sortBy === 'type' && (sortOrder === 'desc' ? '↓' : '↑')}
-                </div>
-                <div className="sort-item size-column" onClick={() => handleSortChange('size')}>
-                  大小 {sortBy === 'size' && (sortOrder === 'desc' ? '↓' : '↑')}
-                </div>
-                <div className="sort-item date-column" onClick={() => handleSortChange('created_at')}>
-                  上傳時間 {sortBy === 'created_at' && (sortOrder === 'desc' ? '↓' : '↑')}
-                </div>
-                <div className="sort-item actions-column">操作</div>
-              </div>
-            )}
-
-            {/* File Items */}
-            <div className={`file-list ${viewMode}`}>
-              {filteredAndSortedFiles.map((file: FileInfo) => (
-                <div key={file.name} className="file-item">
-                  {viewMode === 'grid' ? (
-                    <Card className="file-card">
-                      <div className="file-card-header">
+            <div className="table-wrapper">
+              <table className="file-table">
+                <thead>
+                  <tr>
+                    <th className="checkbox-column">
+                      <input
+                        type="checkbox"
+                        checked={selectedFiles.size === paginatedFiles.length && paginatedFiles.length > 0}
+                        onChange={handleSelectAll}
+                      />
+                    </th>
+                    <th className="name-column" onClick={() => handleSortChange('name')}>
+                      檔案名稱 {sortBy === 'name' && (sortOrder === 'desc' ? '↓' : '↑')}
+                    </th>
+                    <th className="status-column" onClick={() => handleSortChange('type')}>
+                      狀態 {sortBy === 'type' && (sortOrder === 'desc' ? '↓' : '↑')}
+                    </th>
+                    <th className="size-column" onClick={() => handleSortChange('size')}>
+                      大小 {sortBy === 'size' && (sortOrder === 'desc' ? '↓' : '↑')}
+                    </th>
+                    <th className="date-column" onClick={() => handleSortChange('created_at')}>
+                      上傳時間 {sortBy === 'created_at' && (sortOrder === 'desc' ? '↓' : '↑')}
+                    </th>
+                    <th className="actions-column">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedFiles.map((file: FileInfo) => (
+                    <tr key={file.name}>
+                      <td className="checkbox-column">
                         <input
                           type="checkbox"
                           checked={selectedFiles.has(file.name)}
                           onChange={() => toggleFileSelection(file.name)}
                         />
-                        <Button
-                          variant="danger"
-                          size="small"
-                          onClick={() => handleDelete(file.name)}
-                          aria-label="刪除檔案"
-                        >
-                          <FiTrash2 />
-                        </Button>
-                      </div>
-                      <div className="file-icon">
-                        {getFileIcon(file.name)}
-                      </div>
-                      <div className="file-info">
-                        <div className="file-name" title={file.display_name}>
-                          {file.display_name}
-                        </div>
-                        <div className="file-meta">
-                          <span className="file-id" title={file.name}>
-                            {file.name.split('/').pop()}
-                          </span>
-                          <span className={`status-badge ${file.state.toLowerCase()}`}>
-                            {file.state === 'ACTIVE' ? (
-                              <><FiCheckCircle /> 啟用中</>
-                            ) : file.state === 'PROCESSING' ? (
-                              <><FiRefreshCw /> 處理中</>
-                            ) : (
-                              <><FiAlertCircle /> {file.state}</>
-                            )}
-                          </span>
-                        </div>
-                        <div className="file-size">
-                          {FileSizeFormatter.format(file.size_bytes || file.size || 0)}
-                        </div>
-                        <div className="file-date">
-                          <FiClock /> {DateFormatter.toLocaleDateTimeString(file.create_time || file.created_at || '')}
-                        </div>
-                      </div>
-                    </Card>
-                  ) : (
-                    <div className="file-row">
-                      <div className="file-cell checkbox-column">
-                        <input
-                          type="checkbox"
-                          checked={selectedFiles.has(file.name)}
-                          onChange={() => toggleFileSelection(file.name)}
-                        />
-                      </div>
-                      <div className="file-cell name-column">
+                      </td>
+                      <td className="name-column">
                         <div className="file-name-with-icon">
                           {getFileIcon(file.name)}
                           <span title={file.display_name}>{file.display_name}</span>
                         </div>
-                      </div>
-                      <div className="file-cell type-column">
+                      </td>
+                      <td className="status-column">
                         <span className={`status-badge ${file.state.toLowerCase()}`}>
                           {file.state === 'ACTIVE' ? (
                             <><FiCheckCircle /> 啟用中</>
@@ -506,14 +452,14 @@ export function FileManager() {
                             <><FiAlertCircle /> {file.state}</>
                           )}
                         </span>
-                      </div>
-                      <div className="file-cell size-column">
+                      </td>
+                      <td className="size-column">
                         {FileSizeFormatter.format(file.size_bytes || file.size || 0)}
-                      </div>
-                      <div className="file-cell date-column">
+                      </td>
+                      <td className="date-column">
                         {DateFormatter.toLocaleDateTimeString(file.create_time || file.created_at || '')}
-                      </div>
-                      <div className="file-cell actions-column">
+                      </td>
+                      <td className="actions-column">
                         <Button
                           variant="danger"
                           size="small"
@@ -522,12 +468,42 @@ export function FileManager() {
                         >
                           <FiTrash2 />
                         </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="pagination">
+                <Button
+                  variant="secondary"
+                  size="small"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <FiChevronLeft /> 上一頁
+                </Button>
+                
+                <div className="pagination-info">
+                  <span>第 {currentPage} 頁，共 {totalPages} 頁</span>
+                  <span className="pagination-count">
+                    顯示 {(currentPage - 1) * ITEMS_PER_PAGE + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, filteredAndSortedFiles.length)} / 共 {filteredAndSortedFiles.length} 筆
+                  </span>
+                </div>
+
+                <Button
+                  variant="secondary"
+                  size="small"
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  下一頁 <FiChevronRight />
+                </Button>
+              </div>
+            )}
           </>
         )}
       </div>

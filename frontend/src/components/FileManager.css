@@ -196,11 +196,13 @@
   font-weight: 500;
 }
 
-/* File List Container */
-.file-list-container {
+/* File Table Container */
+.file-table-container {
   flex: 1;
   overflow-y: auto;
   padding: 24px 32px;
+  display: flex;
+  flex-direction: column;
 }
 
 .loading-container {
@@ -217,191 +219,145 @@
   font-size: 16px;
 }
 
-/* File Grid */
-.file-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
-}
-
-.file-card {
+/* Table Wrapper */
+.table-wrapper {
+  flex: 1;
   background: white;
   border-radius: 12px;
-  padding: 20px;
+  overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  transition: all 0.3s ease;
+}
+
+/* File Table */
+.file-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.file-table thead {
+  background: #f8f9fa;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.file-table th {
+  padding: 16px;
+  text-align: left;
+  font-weight: 600;
+  color: #333;
   cursor: pointer;
-  position: relative;
+  user-select: none;
+  white-space: nowrap;
+  transition: background 0.2s;
 }
 
-.file-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+.file-table th:hover {
+  background: #e8eaed;
 }
 
-.file-card.selected {
-  border: 2px solid #667eea;
-  background: #f0f3ff;
+.file-table th.checkbox-column {
+  width: 50px;
+  cursor: default;
 }
 
-.file-card-header {
+.file-table th.checkbox-column:hover {
+  background: #f8f9fa;
+}
+
+.file-table th.actions-column {
+  width: 100px;
+  text-align: center;
+  cursor: default;
+}
+
+.file-table th.actions-column:hover {
+  background: #f8f9fa;
+}
+
+.file-table th.status-column {
+  width: 140px;
+}
+
+.file-table th.size-column {
+  width: 120px;
+}
+
+.file-table th.date-column {
+  width: 180px;
+}
+
+.file-table tbody tr {
+  border-bottom: 1px solid #f0f0f0;
+  transition: background 0.2s;
+}
+
+.file-table tbody tr:hover {
+  background: #fafbfc;
+}
+
+.file-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.file-table td {
+  padding: 16px;
+  color: #555;
+}
+
+.file-table td.checkbox-column {
+  text-align: center;
+}
+
+.file-table td.actions-column {
+  text-align: center;
+}
+
+.file-table td.size-column,
+.file-table td.date-column {
+  color: #666;
+}
+
+.file-name-with-icon {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 12px;
+  align-items: center;
+  gap: 10px;
 }
 
-.file-card-icon {
-  font-size: 32px;
+.file-name-with-icon svg {
+  font-size: 20px;
   color: #667eea;
   flex-shrink: 0;
 }
 
-.file-card-info,
-.file-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.file-card-name,
-.file-name {
-  font-weight: 600;
+.file-name-with-icon span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: #333;
-  font-size: 15px;
-  margin-bottom: 8px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.file-meta {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.file-card-meta {
-  font-size: 13px;
-  color: #666;
-  display: flex;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.file-id {
-  font-family: 'Monaco', 'Courier New', monospace;
-  font-size: 11px;
-  color: #999;
-  padding: 2px 6px;
-  background: #f5f5f5;
-  border-radius: 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 150px;
-}
-
-.file-size {
-  font-size: 13px;
-  color: #666;
   font-weight: 500;
-  margin-bottom: 8px;
 }
 
-.file-date {
-  font-size: 12px;
-  color: #999;
+/* Pagination */
+.pagination {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 4px;
+  padding: 20px 0 0;
+  gap: 16px;
 }
 
-.file-card-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-  padding-top: 12px;
-  border-top: 1px solid #f0f0f0;
-}
-
-.file-card-checkbox {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  width: 20px;
-  height: 20px;
-  cursor: pointer;
-}
-
-/* File List */
-.file-list {
+.pagination-info {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-}
-
-.file-item {
-  background: white;
-  border-radius: 10px;
-  padding: 16px 20px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
-  display: flex;
   align-items: center;
-  gap: 16px;
-}
-
-.file-item:hover {
-  transform: translateX(4px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-
-.file-item.selected {
-  background: #f0f3ff;
-  border-left: 4px solid #667eea;
-}
-
-.file-item-checkbox {
-  width: 20px;
-  height: 20px;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.file-item-icon {
-  font-size: 28px;
-  color: #667eea;
-  flex-shrink: 0;
-}
-
-.file-item-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.file-item-name {
-  font-weight: 600;
-  color: #333;
-  font-size: 15px;
-  margin-bottom: 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.file-item-meta {
-  font-size: 13px;
+  gap: 4px;
   color: #666;
-  display: flex;
-  gap: 16px;
+  font-size: 14px;
 }
 
-.file-item-actions {
-  display: flex;
-  gap: 8px;
-  flex-shrink: 0;
+.pagination-count {
+  font-size: 12px;
+  color: #999;
 }
 
 /* Status Badge */
@@ -461,8 +417,9 @@
 
 /* Responsive */
 @media (max-width: 1024px) {
-  .file-grid {
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  .file-table th.date-column,
+  .file-table td.date-column {
+    display: none;
   }
 }
 
@@ -500,15 +457,26 @@
     justify-content: space-between;
   }
 
-  .file-list-container {
+  .file-table-container {
     padding: 16px 20px;
   }
 
-  .file-grid {
-    grid-template-columns: 1fr;
+  .file-table th.size-column,
+  .file-table td.size-column,
+  .file-table th.status-column,
+  .file-table td.status-column {
+    display: none;
   }
 
   .upload-area {
     margin: 16px 20px 0;
+  }
+
+  .pagination {
+    flex-direction: column;
+  }
+
+  .pagination-info {
+    order: -1;
   }
 }
