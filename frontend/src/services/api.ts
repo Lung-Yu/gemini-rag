@@ -259,6 +259,18 @@ class ApiClient {
     });
   }
 
+  async syncFiles(): Promise<{ success: boolean; message: string; synced: number; skipped: number; errors: number; total: number }> {
+    // Clear relevant caches
+    this.cache.delete('files');
+    this.cache.delete('health');
+    this.cache.delete('stats');
+    
+    return this.makeRequest({
+      method: 'post',
+      url: '/api/files/sync'
+    });
+  }
+
   // Search
   async searchDocuments(request: SearchRequest): Promise<SearchResponse> {
     return this.makeRequest<SearchResponse>({
@@ -329,6 +341,7 @@ export const listFiles = () => apiClient.listFiles();
 export const uploadFile = (file: File, onProgress?: (progress: number) => void) => apiClient.uploadFile(file, onProgress);
 export const deleteFile = (fileName: string) => apiClient.deleteFile(fileName);
 export const clearAllFiles = () => apiClient.clearAllFiles();
+export const syncFiles = () => apiClient.syncFiles();
 export const searchDocuments = (query: string, topK: number = 5, similarityThreshold: number = 0.7) => 
   apiClient.searchDocuments({ query, top_k: topK, similarity_threshold: similarityThreshold });
 export const getStatistics = () => apiClient.getStatistics();

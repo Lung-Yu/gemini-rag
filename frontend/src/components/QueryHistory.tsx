@@ -101,11 +101,19 @@ export function QueryHistory() {
       return acc;
     }, {} as Record<string, number>);
 
+    const totalTokens = history.reduce((sum, q) => sum + (q.total_tokens || 0), 0);
+    const avgTokens = history.length > 0 ? Math.round(totalTokens / history.length) : 0;
+    const successfulQueries = history.filter(q => q.success).length;
+    const successRate = history.length > 0 ? (successfulQueries / history.length * 100).toFixed(1) : '0';
+
     return {
       totalQueries: history.length,
       modelsUsed: Object.keys(modelCount).length,
       mostUsedModel: Object.entries(modelCount).sort(([,a], [,b]) => b - a)[0]?.[0] || 'N/A',
-      avgResponseTime: '0.0'
+      totalTokens,
+      avgTokens,
+      successfulQueries,
+      successRate
     };
   }, [history]);
 
@@ -195,7 +203,9 @@ export function QueryHistory() {
           <div className="stats-summary">
             <span><FiMessageSquare /> {stats.totalQueries} 次查詢</span>
             <span><FaRobot /> {stats.modelsUsed} 個模型</span>
-            <span><FiClock /> 平均 {stats.avgResponseTime}s</span>
+            <span className="success-rate">✓ {stats.successRate}% 成功率</span>
+            <span className="token-stats">💬 總計 {stats.totalTokens.toLocaleString()} tokens</span>
+            <span>📊 平均 {stats.avgTokens.toLocaleString()} tokens</span>
           </div>
         </div>
 
@@ -362,6 +372,17 @@ export function QueryHistory() {
                         {query.files_used && query.files_used > 0 && (
                           <span>📁 {query.files_used} 個檔案</span>
                         )}
+                        {query.total_tokens && (
+                          <span className="token-badge">
+                            💬 {query.total_tokens.toLocaleString()} tokens
+                          </span>
+                        )}
+                        {query.response_length && (
+                          <span>📝 {query.response_length} 字元</span>
+                        )}
+                        <span className={`status-badge ${query.success ? 'success' : 'error'}`}>
+                          {query.success ? '✓ 成功' : '✗ 失敗'}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -386,20 +407,66 @@ export function QueryHistory() {
                   </div>
                 </div>
 
-                {expandedQuery === query.id && query.response && (
+                {expandedQuery === query.id && (
                   <div className="query-expansion">
-                    <div className="response-section">
-                      <h4><FaRobot /> AI 回應：</h4>
-                      <div className="response-text">
-                        {query.response}
-                      </div>
-                      {query.prompt_tokens && query.completion_tokens && (
-                        <div className="token-info">
-                          <span>輸入 Token: {query.prompt_tokens}</span>
-                          <span>輸出 Token: {query.completion_tokens}</span>
-                          <span>總計: {query.prompt_tokens + query.completion_tokens}</span>
+                    {query.response && (
+                      <div className="response-section">
+                        <h4><FaRobot /> AI 回應：</h4>
+                        <div className="response-text">
+                          {query.response}
                         </div>
-                      )}
+                      </div>
+                    )}
+                    
+                    {query.error_message && (
+                      <div className="error-section">
+                        <h4>⚠️ 錯誤訊息：</h4>
+                        <div className="error-text">
+                          {query.error_message}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="detail-stats">
+                      <div className="stat-group">
+                        <h4>📊 詳細統計</h4>
+                        <div className="stats-grid">
+                          {query.prompt_tokens !== null && (
+                            <div className="stat-item">
+                              <span className="stat-label">輸入 Token:</span>
+                              <span className="stat-value">{query.prompt_tokens.toLocaleString()}</span>
+                            </div>
+                          )}
+                          {query.completion_tokens !== null && (
+                            <div className="stat-item">
+                              <span className="stat-label">輸出 Token:</span>
+                              <span className="stat-value">{query.completion_tokens.toLocaleString()}</span>
+                            </div>
+                          )}
+                          {query.total_tokens !== null && (
+                            <div className="stat-item">
+                              <span className="stat-label">總 Token:</span>
+                              <span className="stat-value highlight">{query.total_tokens.toLocaleString()}</span>
+                            </div>
+                          )}
+                          {query.response_length !== null && (
+                            <div className="stat-item">
+                              <span className="stat-label">回應長度:</span>
+                              <span className="stat-value">{query.response_length} 字元</span>
+                            </div>
+                          )}
+                          <div className="stat-item">
+                            <span className="stat-label">使用檔案:</span>
+                            <span className="stat-value">{query.files_used} 個</span>
+                          </div>
+                          <div className="stat-item">
+                            <span className="stat-label">狀態:</span>
+                            <span className={`stat-value ${query.success ? 'success' : 'error'}`}>
+                              {query.success ? '成功 ✓' : '失敗 ✗'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}

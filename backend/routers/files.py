@@ -98,3 +98,58 @@ async def clear_all_files():
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/sync", response_model=dict)
+async def sync_files(db: Session = Depends(get_db)):
+    """Sync files from Gemini API to PostgreSQL database"""
+    try:
+        # Get all files from Gemini
+        gemini_files = rag_service.list_files()
+        
+        # Setup services
+        doc_service = DocumentService(db, embedding_service)
+        
+        synced_count = 0
+        skipped_count = 0
+        error_count = 0
+        
+        for gemini_file in gemini_files:
+            try:
+                # Check if already exists
+                existing_doc = doc_service.get_document_by_gemini_name(gemini_file['name'])
+                if existing_doc:
+                    skipped_count += 1
+                    continue
+                
+                # Create document metadata in database
+                content = f"檔案名稱: {gemini_file['display_name']}\n"
+                content += f"上傳時間: {gemini_file.get('create_time', '')}\n"
+                content += f"檔案大小: {gemini_file.get('size_bytes', 0)} bytes\n"
+                content += f"狀態: {gemini_file.get('state', '')}\n"
+                content += f"URI: {gemini_file.get('uri', '')}\n"
+                
+                doc_service.create_document(
+                    gemini_file_name=gemini_file['name'],
+                    display_name=gemini_file['display_name'],
+                    content=content,
+                    file_size=gemini_file.get('size_bytes', 0)
+                )
+                
+                synced_count += 1
+                
+            except Exception as e:
+                print(f"Error syncing file {gemini_file.get('display_name', 'unknown')}: {e}")
+                error_count += 1
+        
+        return {
+            "success": True,
+            "message": "檔案同步完成",
+            "synced": synced_count,
+            "skipped": skipped_count,
+            "errors": error_count,
+            "total": len(gemini_files)
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

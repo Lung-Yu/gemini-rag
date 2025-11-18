@@ -127,6 +127,25 @@ export function useFileManager(): UseFileManagerReturn {
     }
   }, [files.length, showMessage, loadFiles]);
 
+  // Sync files from Gemini API to database
+  const handleSync = useCallback(async (): Promise<void> => {
+    setIsLoading(true);
+    try {
+      const result = await apiClient.syncFiles();
+      showMessage(
+        `同步完成: ${result.synced} 個新增, ${result.skipped} 個跳過${result.errors ? `, ${result.errors} 個失敗` : ''}`,
+        result.errors > 0 ? 'error' : 'success'
+      );
+      await loadFiles(); // Reload files after sync
+      await refreshHealth(); // Update health stats
+    } catch (error) {
+      console.error('Sync failed:', error);
+      showMessage(`同步失敗: ${error instanceof Error ? error.message : '未知錯誤'}`, 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [showMessage, loadFiles, refreshHealth]);
+
   // Handle drag and drop
   const handleDrop = useCallback(async (event: React.DragEvent<HTMLElement>): Promise<void> => {
     event.preventDefault();
@@ -153,7 +172,7 @@ export function useFileManager(): UseFileManagerReturn {
   // Get file statistics
   const fileStats = useMemo(() => {
     const totalFiles = files.length;
-    const totalSize = files.reduce((sum, file) => sum + (file.size || 0), 0);
+    const totalSize = files.reduce((sum, file) => sum + (file.size_bytes || file.size || 0), 0);
     const processingFiles = files.filter(f => f.state.toLowerCase() === 'processing').length;
     const readyFiles = files.filter(f => f.state.toLowerCase() === 'active').length;
     const errorFiles = files.filter(f => f.state.toLowerCase() === 'failed').length;
@@ -177,6 +196,7 @@ export function useFileManager(): UseFileManagerReturn {
     handleMultipleUpload,
     handleDelete,
     handleClearAll,
+    handleSync,
     loadFiles,
     handleDrop,
     handleDragOver,
@@ -192,6 +212,7 @@ export function useFileManager(): UseFileManagerReturn {
     handleMultipleUpload,
     handleDelete,
     handleClearAll,
+    handleSync,
     loadFiles,
     handleDrop,
     handleDragOver,

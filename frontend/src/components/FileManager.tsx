@@ -1,15 +1,15 @@
 // Enhanced File Manager Component with TypeScript and Hooks
 
-import React, { useState, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import {
   FiUpload, FiFile, FiTrash2, FiRefreshCw,
   FiSearch, FiGrid, FiList, FiFolderPlus,
-  FiDownload, FiEye, FiFilter, FiClock, FiFileText, FiDatabase
+  FiDownload, FiEye, FiFilter, FiClock, FiFileText, FiDatabase, FiCheckCircle, FiAlertCircle
 } from 'react-icons/fi';
 
 import { useFileManager } from '../hooks/useFileManager';
 import { Button, Card, LoadingSpinner, EmptyState } from './common';
-import { ACCEPTED_FILE_TYPES, MESSAGES } from '../constants';
+import { ACCEPTED_FILE_TYPES } from '../constants';
 import { FileSizeFormatter, DateFormatter } from '../utils/formatters';
 import { validateFiles } from '../utils/validation';
 import type { FileInfo } from '../types';
@@ -28,6 +28,7 @@ export function FileManager() {
     uploadProgress,
     handleMultipleUpload,
     handleDelete,
+    handleSync,
     loadFiles,
     message
   } = useFileManager();
@@ -51,6 +52,14 @@ export function FileManager() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounterRef = useRef(0);
 
+  // Load and sync files on component mount
+  useEffect(() => {
+    const initializeFiles = async () => {
+      await handleSync(); // Sync first to ensure DB is up-to-date
+    };
+    initializeFiles();
+  }, [handleSync]);
+
   // File filtering and sorting
   const filteredAndSortedFiles = useMemo(() => {
     let filtered = files;
@@ -73,10 +82,10 @@ export function FileManager() {
           comparison = a.display_name.localeCompare(b.display_name);
           break;
         case 'size':
-          comparison = (a.size || 0) - (b.size || 0);
+          comparison = (a.size_bytes || a.size || 0) - (b.size_bytes || b.size || 0);
           break;
         case 'created_at':
-          comparison = new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+          comparison = new Date(a.create_time || a.created_at || 0).getTime() - new Date(b.create_time || b.created_at || 0).getTime();
           break;
       }
 
@@ -89,7 +98,7 @@ export function FileManager() {
   // Statistics
   const stats = useMemo(() => {
     const totalFiles = files.length;
-    const totalSize = files.reduce((sum, file) => sum + (file.size || 0), 0);
+    const totalSize = files.reduce((sum, file) => sum + (file.size_bytes || file.size || 0), 0);
 
     return { totalFiles, totalSize };
   }, [files]);
@@ -109,9 +118,9 @@ export function FileManager() {
 
     try {
       await handleMultipleUpload(filesArray);
-      showMessage(MESSAGES.FILE_UPLOAD_SUCCESS, 'success');
+      showMessage('檔案上傳成功', 'success');
     } catch (error) {
-      showMessage(MESSAGES.FILE_UPLOAD_FAILED, 'error');
+      showMessage('檔案上傳失敗', 'error');
     }
 
     // Reset input
@@ -142,11 +151,11 @@ export function FileManager() {
     e.stopPropagation();
   }, []);
 
-  const handleDrop = useCallback(async (e: React.DragEvent) => {
+    const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    dragCounterRef.current = 0;
     setIsDragOver(false);
+    dragCounterRef.current = 0;
 
     const fileList = e.dataTransfer.files;
     if (!fileList || fileList.length === 0) return;
@@ -161,9 +170,9 @@ export function FileManager() {
 
     try {
       await handleMultipleUpload(filesArray);
-      showMessage(MESSAGES.FILE_UPLOAD_SUCCESS, 'success');
+      showMessage('檔案上傳成功', 'success');
     } catch (error) {
-      showMessage(MESSAGES.FILE_UPLOAD_FAILED, 'error');
+      showMessage('檔案上傳失敗', 'error');
     }
   }, [handleMultipleUpload, showMessage]);
 
@@ -218,16 +227,6 @@ export function FileManager() {
       setSortOrder('desc');
     }
   }, [sortBy]);
-
-  // Handle sync
-  const handleSync = useCallback(async () => {
-    try {
-      await loadFiles();
-      showMessage('文件同步成功', 'success');
-    } catch (error) {
-      showMessage('文件同步失敗', 'error');
-    }
-  }, [loadFiles, showMessage]);
 
   // File type icon
   const getFileIcon = useCallback((fileType: string) => {
@@ -461,11 +460,24 @@ export function FileManager() {
                           {file.display_name}
                         </div>
                         <div className="file-meta">
-                          <span>{file.name.split(".").pop()}</span>
-                          <span>{FileSizeFormatter.format(file.size || 0)}</span>
+                          <span className="file-id" title={file.name}>
+                            {file.name.split('/').pop()}
+                          </span>
+                          <span className={`status-badge ${file.state.toLowerCase()}`}>
+                            {file.state === 'ACTIVE' ? (
+                              <><FiCheckCircle /> 啟用中</>
+                            ) : file.state === 'PROCESSING' ? (
+                              <><FiRefreshCw /> 處理中</>
+                            ) : (
+                              <><FiAlertCircle /> {file.state}</>
+                            )}
+                          </span>
+                        </div>
+                        <div className="file-size">
+                          {FileSizeFormatter.format(file.size_bytes || file.size || 0)}
                         </div>
                         <div className="file-date">
-                          {DateFormatter.toLocaleDateTimeString(file.created_at || '')}
+                          <FiClock /> {DateFormatter.toLocaleDateTimeString(file.create_time || file.created_at || '')}
                         </div>
                       </div>
                     </Card>
@@ -485,13 +497,21 @@ export function FileManager() {
                         </div>
                       </div>
                       <div className="file-cell type-column">
-                        <span className="file-type-badge">{file.name.split(".").pop()}</span>
+                        <span className={`status-badge ${file.state.toLowerCase()}`}>
+                          {file.state === 'ACTIVE' ? (
+                            <><FiCheckCircle /> 啟用中</>
+                          ) : file.state === 'PROCESSING' ? (
+                            <><FiRefreshCw /> 處理中</>
+                          ) : (
+                            <><FiAlertCircle /> {file.state}</>
+                          )}
+                        </span>
                       </div>
                       <div className="file-cell size-column">
-                        {FileSizeFormatter.format(file.size || 0)}
+                        {FileSizeFormatter.format(file.size_bytes || file.size || 0)}
                       </div>
                       <div className="file-cell date-column">
-                        {DateFormatter.toLocaleDateTimeString(file.created_at || '')}
+                        {DateFormatter.toLocaleDateTimeString(file.create_time || file.created_at || '')}
                       </div>
                       <div className="file-cell actions-column">
                         <Button

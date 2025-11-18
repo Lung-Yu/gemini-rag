@@ -257,19 +257,29 @@
   flex-shrink: 0;
 }
 
-.file-card-info {
+.file-card-info,
+.file-info {
   flex: 1;
   min-width: 0;
 }
 
-.file-card-name {
+.file-card-name,
+.file-name {
   font-weight: 600;
   color: #333;
   font-size: 15px;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.file-meta {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 .file-card-meta {
@@ -278,6 +288,34 @@
   display: flex;
   gap: 12px;
   margin-bottom: 12px;
+}
+
+.file-id {
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 11px;
+  color: #999;
+  padding: 2px 6px;
+  background: #f5f5f5;
+  border-radius: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 150px;
+}
+
+.file-size {
+  font-size: 13px;
+  color: #666;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.file-date {
+  font-size: 12px;
+  color: #999;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .file-card-actions {
@@ -374,7 +412,7 @@
   padding: 4px 10px;
   border-radius: 12px;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .status-badge.active {
@@ -385,11 +423,22 @@
 .status-badge.processing {
   background: #fff3cd;
   color: #856404;
+  animation: pulse 1.5s ease-in-out infinite;
 }
 
+.status-badge.failed,
 .status-badge.error {
   background: #f8d7da;
   color: #721c24;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
 }
 
 /* Scrollbar */

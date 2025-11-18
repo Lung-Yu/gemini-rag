@@ -22,7 +22,7 @@ export const CONTENT_PREVIEW_LENGTH = 200;
 
 // File Upload
 export const ACCEPTED_FILE_TYPES = '.txt,.pdf,.doc,.docx';
-export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+export const MAX_FILE_SIZE = 10485760; // 10MB (10 * 1024 * 1024)
 
 // Default Models
 export const DEFAULT_MODEL = 'gemini-1.5-flash';
@@ -45,18 +45,6 @@ export const STORAGE_KEYS = {
   SYSTEM_PROMPT: 'systemPrompt',
 };
 
-// User Messages
-export const MESSAGES = {
-  FILE_UPLOAD_SUCCESS: 'File uploaded successfully',
-  FILE_UPLOAD_FAILED: 'File upload failed',
-  FILE_DELETE_SUCCESS: 'File deleted successfully',
-  FILE_DELETE_FAILED: 'File deletion failed',
-  CONNECTION_ERROR: 'Connection error',
-  NETWORK_ERROR: 'Network error',
-  INVALID_INPUT: 'Invalid input',
-  PROCESSING: 'Processing...',
-};
-
 // API Configuration
-export const API_BASE_URL = (import.meta?.env?.VITE_API_URL || (process.env as any)?.REACT_APP_API_URL || 'http://localhost:8000') as string;
-export const WS_BASE_URL = (import.meta?.env?.VITE_WS_URL || (process.env as any)?.REACT_APP_WS_URL || 'ws://localhost:8000/api/chat/ws') as string;
+export const API_BASE_URL: string = (import.meta?.env?.VITE_API_URL || (process.env as any)?.REACT_APP_API_URL || 'http://localhost:8000');
+export const WS_BASE_URL: string = (import.meta?.env?.VITE_WS_URL || (process.env as any)?.REACT_APP_WS_URL || 'ws://localhost:8000/api/chat/ws');

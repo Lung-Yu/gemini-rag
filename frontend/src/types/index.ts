@@ -58,7 +58,10 @@ export interface FileInfo {
   display_name: string;
   state: string;
   size?: number;
+  size_bytes?: number;
   created_at?: string;
+  create_time?: string;
+  uri?: string;
 }
 
 export interface FilesResponse {
@@ -238,6 +241,7 @@ export interface UseFileManagerReturn {
   handleMultipleUpload: (files: File[]) => Promise<void>;
   handleDelete: (fileName: string) => Promise<void>;
   handleClearAll: () => Promise<void>;
+  handleSync: () => Promise<void>;
   loadFiles: () => Promise<void>;
   handleDrop: (e: React.DragEvent<HTMLElement>) => Promise<void>;
   handleDragOver: (e: React.DragEvent<HTMLElement>) => void;
