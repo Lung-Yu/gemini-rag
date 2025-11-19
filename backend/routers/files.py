@@ -5,23 +5,36 @@ from backend.services.rag_service import RAGService
 from backend.services.embedding_service import EmbeddingService
 from backend.services.document_service import DocumentService
 from backend.database.connection import get_db
+from backend.config import get_settings, Settings
+from backend.utils.logger import get_logger
 import os
 import tempfile
 
 router = APIRouter(prefix="/api/files", tags=["files"])
+logger = get_logger(__name__)
 
-# Initialize services - now using global instances
-from backend.services.rag_service import rag_service
 
-API_KEY = os.environ.get('GOOGLE_API_KEY')
-if not API_KEY:
-    raise ValueError("GOOGLE_API_KEY environment variable is not set")
+# Dependency functions
+def get_rag_service(settings: Settings = Depends(get_settings)) -> RAGService:
+    """Get RAG service instance"""
+    return RAGService(settings.GOOGLE_API_KEY)
 
-embedding_service = EmbeddingService()
+
+def get_embedding_service(settings: Settings = Depends(get_settings)) -> EmbeddingService:
+    """Get embedding service instance"""
+    return EmbeddingService(settings.GOOGLE_API_KEY)
+
+
+def get_document_service(
+    db: Session = Depends(get_db),
+    embedding_service: EmbeddingService = Depends(get_embedding_service)
+) -> DocumentService:
+    """Get document service instance"""
+    return DocumentService(db, embedding_service)
 
 
 @router.get("", response_model=FileListResponse)
-async def list_files():
+async def list_files(rag_service: RAGService = Depends(get_rag_service)):
     """List all uploaded files"""
     files = rag_service.list_files()
     return FileListResponse(
@@ -31,7 +44,11 @@ async def list_files():
 
 
 @router.post("/upload", response_model=UploadResponse)
-async def upload_file(file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_file(
+    file: UploadFile = File(...),
+    rag_service: RAGService = Depends(get_rag_service),
+    doc_service: DocumentService = Depends(get_document_service)
+):
     """Upload a file to RAG system and index it"""
     try:
         # Read file content
@@ -44,10 +61,9 @@ async def upload_file(file: UploadFile = File(...), db: Session = Depends(get_db
             tmp_file_path = tmp_file.name
         
         # Upload to Gemini
-        result = rag_service.upload_file(tmp_file_path)
+        result = rag_service.upload_file(tmp_file_path, display_name=file.filename)
         
         # Index document in database with embedding
-        doc_service = DocumentService(db, embedding_service)
         doc_service.create_document(
             gemini_file_name=result['name'],
             display_name=result['display_name'],
@@ -60,25 +76,29 @@ async def upload_file(file: UploadFile = File(...), db: Session = Depends(get_db
         
         return UploadResponse(
             success=True,
-            message="檔案上傳並索引成功",
-            file_name=result['name']
+            message="File uploaded and indexed successfully",
+            file=FileInfo(**result)
         )
     except Exception as e:
+        logger.error(f"Error uploading file: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/{file_name}", response_model=DeleteResponse)
-async def delete_file(file_name: str, db: Session = Depends(get_db)):
+async def delete_file(
+    file_name: str,
+    rag_service: RAGService = Depends(get_rag_service),
+    doc_service: DocumentService = Depends(get_document_service)
+):
     """Delete a file from RAG system and database"""
     try:
         # Delete from Gemini
         success = rag_service.delete_file(file_name)
         
         # Delete from database
-        doc_service = DocumentService(db, embedding_service)
         doc_service.delete_document(file_name)
         
         if success:
-            return DeleteResponse(success=True, message="檔案已刪除")
+            return DeleteResponse(success=True, message="File deleted successfully")
         else:
             raise HTTPException(status_code=404, detail="找不到指定的檔案")
     except HTTPException:
@@ -88,68 +108,39 @@ async def delete_file(file_name: str, db: Session = Depends(get_db)):
 
 
 @router.delete("", response_model=DeleteResponse)
-async def clear_all_files():
+async def clear_all_files(rag_service: RAGService = Depends(get_rag_service)):
     """Clear all uploaded files"""
     try:
         count = rag_service.clear_all_files()
         return DeleteResponse(
             success=True,
-            message=f"已刪除 {count} 個檔案"
+            message=f"Deleted {count} files"
         )
     except Exception as e:
+        logger.error(f"Error clearing files: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/sync", response_model=dict)
-async def sync_files(db: Session = Depends(get_db)):
+async def sync_files(
+    rag_service: RAGService = Depends(get_rag_service),
+    doc_service: DocumentService = Depends(get_document_service)
+):
     """Sync files from Gemini API to PostgreSQL database"""
     try:
         # Get all files from Gemini
         gemini_files = rag_service.list_files()
         
-        # Setup services
-        doc_service = DocumentService(db, embedding_service)
-        
-        synced_count = 0
-        skipped_count = 0
-        error_count = 0
-        
-        for gemini_file in gemini_files:
-            try:
-                # Check if already exists
-                existing_doc = doc_service.get_document_by_gemini_name(gemini_file['name'])
-                if existing_doc:
-                    skipped_count += 1
-                    continue
-                
-                # Create document metadata in database
-                content = f"檔案名稱: {gemini_file['display_name']}\n"
-                content += f"上傳時間: {gemini_file.get('create_time', '')}\n"
-                content += f"檔案大小: {gemini_file.get('size_bytes', 0)} bytes\n"
-                content += f"狀態: {gemini_file.get('state', '')}\n"
-                content += f"URI: {gemini_file.get('uri', '')}\n"
-                
-                doc_service.create_document(
-                    gemini_file_name=gemini_file['name'],
-                    display_name=gemini_file['display_name'],
-                    content=content,
-                    file_size=gemini_file.get('size_bytes', 0)
-                )
-                
-                synced_count += 1
-                
-            except Exception as e:
-                print(f"Error syncing file {gemini_file.get('display_name', 'unknown')}: {e}")
-                error_count += 1
+        # Use document service to sync files
+        synced_count = doc_service.sync_gemini_files_to_db(gemini_files)
         
         return {
             "success": True,
-            "message": "檔案同步完成",
+            "message": "Files synced successfully",
             "synced": synced_count,
-            "skipped": skipped_count,
-            "errors": error_count,
             "total": len(gemini_files)
         }
         
     except Exception as e:
+        logger.error(f"Error syncing files: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

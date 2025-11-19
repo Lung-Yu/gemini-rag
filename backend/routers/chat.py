@@ -5,26 +5,42 @@ from backend.services.rag_service import RAGService
 from backend.services.embedding_service import EmbeddingService
 from backend.services.document_service import DocumentService
 from backend.database.connection import get_db
-import os
+from backend.config import get_settings, Settings
+from backend.utils.logger import get_logger
 import json
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
+logger = get_logger(__name__)
 
-# Initialize services - now using global instances
-from backend.services.rag_service import rag_service
 
-API_KEY = os.environ.get('GOOGLE_API_KEY')
-if not API_KEY:
-    raise ValueError("GOOGLE_API_KEY environment variable is not set")
+# Dependency functions
+def get_rag_service(settings: Settings = Depends(get_settings)) -> RAGService:
+    """Get RAG service instance"""
+    return RAGService(settings.GOOGLE_API_KEY)
 
-embedding_service = EmbeddingService()
+
+def get_embedding_service(settings: Settings = Depends(get_settings)) -> EmbeddingService:
+    """Get embedding service instance"""
+    return EmbeddingService(settings.GOOGLE_API_KEY)
+
+
+def get_document_service(
+    db: Session = Depends(get_db),
+    embedding_service: EmbeddingService = Depends(get_embedding_service)
+) -> DocumentService:
+    """Get document service instance"""
+    return DocumentService(db, embedding_service)
 
 
 @router.post("", response_model=ChatResponse)
-async def chat(request: ChatRequest, db: Session = Depends(get_db)):
+async def chat(
+    request: ChatRequest,
+    rag_service: RAGService = Depends(get_rag_service),
+    doc_service: DocumentService = Depends(get_document_service)
+):
     """Send a message and get RAG-based response with model selection"""
     if not request.message or not request.message.strip():
-        raise HTTPException(status_code=400, detail="訊息不能為空")
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
     
     # Validate model
     available_models = rag_service.get_available_models()
@@ -33,7 +49,7 @@ async def chat(request: ChatRequest, db: Session = Depends(get_db)):
     if request.model not in available_model_ids:
         raise HTTPException(
             status_code=400,
-            detail=f"不支持的模型: {request.model}。請從模型列表中選擇可用的模型。"
+            detail=f"Unsupported model: {request.model}. Please choose from available models."
         )
     
     # Query with specified model, files, and system prompt
@@ -45,7 +61,6 @@ async def chat(request: ChatRequest, db: Session = Depends(get_db)):
     )
     
     # Log the query
-    doc_service = DocumentService(db, embedding_service)
     try:
         doc_service.log_query(
             query=request.message,
@@ -61,12 +76,12 @@ async def chat(request: ChatRequest, db: Session = Depends(get_db)):
             error_message=result.get("message") if not result["success"] else None
         )
     except Exception as log_error:
-        print(f"⚠️ 記錄查詢失敗: {log_error}")
+        logger.warning(f"Failed to log query: {log_error}")
     
     if not result["success"]:
         if result.get("error_type") == "rate_limit":
             raise HTTPException(status_code=429, detail=result.get("message", "Rate limit exceeded"))
-        raise HTTPException(status_code=500, detail=result.get("response", "查詢失敗"))
+        raise HTTPException(status_code=500, detail=result.get("response", "Query failed"))
     
     return ChatResponse(
         success=result["success"],
@@ -81,7 +96,7 @@ async def chat(request: ChatRequest, db: Session = Depends(get_db)):
 
 
 @router.get("/models", response_model=ModelsResponse)
-async def get_available_models():
+async def get_available_models(rag_service: RAGService = Depends(get_rag_service)):
     """Get list of available Gemini models"""
     models = rag_service.get_available_models()
     
@@ -98,9 +113,16 @@ async def get_available_models():
 
 
 @router.websocket("/ws")
-async def websocket_chat(websocket: WebSocket):
+async def websocket_chat(
+    websocket: WebSocket,
+    settings: Settings = Depends(get_settings)
+):
     """WebSocket endpoint for real-time chat with streaming responses"""
     await websocket.accept()
+    
+    # Initialize services for this connection
+    rag_service = RAGService(settings.GOOGLE_API_KEY)
+    embedding_service = EmbeddingService(settings.GOOGLE_API_KEY)
     
     # Get database session for this connection
     db = next(get_db())
@@ -116,7 +138,7 @@ async def websocket_chat(websocket: WebSocket):
                 await websocket.send_text('pong')
                 continue
             
-            print(f"📨 WebSocket received raw data: {data[:100]}...")  # Debug log
+            logger.debug(f"WebSocket received data: {data[:100]}...")
             request_data = json.loads(data)
             
             message = request_data.get('message', '').strip()
@@ -220,23 +242,25 @@ async def websocket_chat(websocket: WebSocket):
                             total_tokens=total_tokens
                         )
                     except Exception as log_error:
-                        print(f"⚠️ 記錄查詢失敗: {log_error}")
+                        logger.warning(f"Failed to log query: {log_error}")
                     
             except ValueError as ve:
                 await websocket.send_json({
                     'type': 'error',
                     'message': str(ve)
                 })
+                logger.error(f"Error in WebSocket: {ve}")
             except Exception as e:
+                logger.error(f"Unexpected error in WebSocket: {e}", exc_info=True)
                 await websocket.send_json({
                     'type': 'error',
-                    'message': f'發生錯誤: {str(e)}'
+                    'message': f'Error occurred: {str(e)}'
                 })
                 
     except WebSocketDisconnect:
-        print("WebSocket 客戶端斷開連接")
+        logger.info("WebSocket client disconnected")
     except Exception as e:
-        print(f"WebSocket 錯誤: {e}")
+        logger.error(f"WebSocket error: {e}", exc_info=True)
         try:
             await websocket.close()
         except:

@@ -1,22 +1,32 @@
 import google.generativeai as genai
 from typing import List, Optional
 import numpy as np
-import os
+from backend.config import EMBEDDING_MODEL
+from backend.exceptions import EmbeddingError
+from backend.utils.logger import get_logger
 
 
 class EmbeddingService:
     """Service for generating and managing embeddings using Gemini API"""
     
-    def __init__(self):
-        api_key = os.getenv('GOOGLE_API_KEY')
+    def __init__(self, api_key: str):
+        """
+        Initialize embedding service
+        
+        Args:
+            api_key: Google API key for authentication
+        """
         if not api_key:
-            raise ValueError("未找到 GOOGLE_API_KEY 環境變數")
+            raise ValueError("API key is required")
         
         self.api_key = api_key
+        self.logger = get_logger(__name__)
         genai.configure(api_key=api_key)
-        self.embedding_model = "models/text-embedding-004"
+        self.embedding_model = EMBEDDING_MODEL
+        
+        self.logger.info(f"EmbeddingService initialized with model: {self.embedding_model}")
     
-    def generate_embedding(self, text: str) -> Optional[List[float]]:
+    def generate_embedding(self, text: str) -> List[float]:
         """
         Generate embedding vector for given text
         
@@ -25,6 +35,9 @@ class EmbeddingService:
             
         Returns:
             List of floats representing the embedding vector (768 dimensions)
+            
+        Raises:
+            EmbeddingError: If embedding generation fails
         """
         try:
             result = genai.embed_content(
@@ -34,10 +47,10 @@ class EmbeddingService:
             )
             return result['embedding']
         except Exception as e:
-            print(f"❌ Embedding generation error: {e}")
-            return None
+            self.logger.error(f"Embedding generation error: {e}", exc_info=True)
+            raise EmbeddingError(f"Failed to generate embedding: {e}")
     
-    def generate_query_embedding(self, query: str) -> Optional[List[float]]:
+    def generate_query_embedding(self, query: str) -> List[float]:
         """
         Generate embedding vector for search query
         
@@ -46,6 +59,9 @@ class EmbeddingService:
             
         Returns:
             List of floats representing the embedding vector (768 dimensions)
+            
+        Raises:
+            EmbeddingError: If embedding generation fails
         """
         try:
             result = genai.embed_content(
@@ -55,8 +71,8 @@ class EmbeddingService:
             )
             return result['embedding']
         except Exception as e:
-            print(f"❌ Query embedding generation error: {e}")
-            return None
+            self.logger.error(f"Query embedding generation error: {e}", exc_info=True)
+            raise EmbeddingError(f"Failed to generate query embedding: {e}")
     
     def batch_generate_embeddings(self, texts: List[str]) -> List[Optional[List[float]]]:
         """

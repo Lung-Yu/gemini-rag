@@ -1,8 +1,12 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func, text
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Any
 from backend.database.models import Document, QueryLog
 from backend.services.embedding_service import EmbeddingService
+from backend.models.schemas import StatsResponse, QueryHistoryResponse
+from backend.exceptions import DatabaseError, EmbeddingError
+from backend.utils.logger import get_logger
+from backend.config import CONTENT_PREVIEW_LENGTH
 
 
 class DocumentService:
@@ -11,6 +15,7 @@ class DocumentService:
     def __init__(self, db: Session, embedding_service: EmbeddingService):
         self.db = db
         self.embedding_service = embedding_service
+        self.logger = get_logger(__name__)
     
     def create_document(
         self,
@@ -18,7 +23,7 @@ class DocumentService:
         display_name: str,
         content: str,
         file_size: Optional[int] = None
-    ) -> Optional[Document]:
+    ) -> Document:
         """
         Create a new document with embedding
         
@@ -29,7 +34,11 @@ class DocumentService:
             file_size: File size in bytes
             
         Returns:
-            Created document or None if failed
+            Created document
+            
+        Raises:
+            DatabaseError: If document creation fails
+            EmbeddingError: If embedding generation fails
         """
         try:
             # Check if document already exists
@@ -38,15 +47,11 @@ class DocumentService:
             ).first()
             
             if existing:
-                print(f"⚠️  Document {display_name} already exists, updating...")
+                self.logger.info(f"Document {display_name} already exists, updating...")
                 return self.update_document(existing.id, content)
             
-            # Generate embedding
+            # Generate embedding (will raise EmbeddingError if fails)
             embedding = self.embedding_service.generate_embedding(content)
-            
-            if embedding is None:
-                print(f"❌ Failed to generate embedding for {display_name}")
-                return None
             
             # Create document
             document = Document(
@@ -61,27 +66,33 @@ class DocumentService:
             self.db.commit()
             self.db.refresh(document)
             
-            print(f"✓ Document {display_name} indexed with embedding")
+            self.logger.info(f"Document {display_name} indexed with embedding")
             return document
         
+        except EmbeddingError:
+            self.db.rollback()
+            raise
         except Exception as e:
             self.db.rollback()
-            print(f"❌ Error creating document: {e}")
-            return None
+            self.logger.error(f"Error creating document {display_name}: {e}", exc_info=True)
+            raise DatabaseError(f"Failed to create document: {e}")
     
-    def update_document(self, document_id: int, content: str) -> Optional[Document]:
-        """Update document content and regenerate embedding"""
+    def update_document(self, document_id: int, content: str) -> Document:
+        """
+        Update document content and regenerate embedding
+        
+        Raises:
+            DatabaseError: If document not found or update fails
+            EmbeddingError: If embedding generation fails
+        """
         try:
             document = self.db.query(Document).filter(Document.id == document_id).first()
             
             if not document:
-                return None
+                raise DatabaseError(f"Document with id {document_id} not found")
             
-            # Generate new embedding
+            # Generate new embedding (will raise EmbeddingError if fails)
             embedding = self.embedding_service.generate_embedding(content)
-            
-            if embedding is None:
-                return None
             
             document.content = content
             document.embedding = embedding
@@ -90,12 +101,16 @@ class DocumentService:
             self.db.commit()
             self.db.refresh(document)
             
+            self.logger.info(f"Updated document {document.display_name}")
             return document
         
+        except (DatabaseError, EmbeddingError):
+            self.db.rollback()
+            raise
         except Exception as e:
             self.db.rollback()
-            print(f"❌ Error updating document: {e}")
-            return None
+            self.logger.error(f"Error updating document {document_id}: {e}", exc_info=True)
+            raise DatabaseError(f"Failed to update document: {e}")
     
     def delete_document(self, gemini_file_name: str) -> bool:
         """Delete document by Gemini file name"""
@@ -107,13 +122,14 @@ class DocumentService:
             if document:
                 self.db.delete(document)
                 self.db.commit()
+                self.logger.info(f"Deleted document: {gemini_file_name}")
                 return True
             
             return False
         
         except Exception as e:
             self.db.rollback()
-            print(f"❌ Error deleting document: {e}")
+            self.logger.error(f"Error deleting document {gemini_file_name}: {e}", exc_info=True)
             return False
     
     def get_document_by_name(self, gemini_file_name: str) -> Optional[Document]:
@@ -150,13 +166,14 @@ class DocumentService:
             
         Returns:
             List of (document, similarity_score) tuples
+            
+        Raises:
+            EmbeddingError: If query embedding generation fails
+            DatabaseError: If search fails
         """
         try:
-            # Generate query embedding
+            # Generate query embedding (will raise EmbeddingError if fails)
             query_embedding = self.embedding_service.generate_query_embedding(query)
-            
-            if query_embedding is None:
-                return []
             
             # Perform vector similarity search using pgvector
             # Using cosine distance (1 - cosine similarity)
@@ -175,11 +192,14 @@ class DocumentService:
                 if float(sim) >= similarity_threshold
             ]
             
+            self.logger.info(f"Search found {len(filtered_results)} results for query")
             return filtered_results
         
+        except EmbeddingError:
+            raise
         except Exception as e:
-            print(f"❌ Error searching documents: {e}")
-            return []
+            self.logger.error(f"Error searching documents: {e}", exc_info=True)
+            raise DatabaseError(f"Failed to search documents: {e}")
     
     def log_query(
         self,
@@ -194,8 +214,13 @@ class DocumentService:
         total_tokens: Optional[int] = None,
         success: bool = True,
         error_message: Optional[str] = None
-    ) -> Optional[QueryLog]:
-        """Log a query for usage statistics"""
+    ) -> QueryLog:
+        """
+        Log a query for usage statistics
+        
+        Raises:
+            DatabaseError: If logging fails
+        """
         try:
             log = QueryLog(
                 query=query,
@@ -219,11 +244,19 @@ class DocumentService:
         
         except Exception as e:
             self.db.rollback()
-            print(f"❌ Error logging query: {e}")
-            return None
+            self.logger.error(f"Error logging query: {e}", exc_info=True)
+            raise DatabaseError(f"Failed to log query: {e}")
     
-    def get_query_stats(self) -> dict:
-        """Get query usage statistics"""
+    def get_query_stats(self) -> StatsResponse:
+        """
+        Get query usage statistics
+        
+        Returns:
+            StatsResponse with usage statistics
+            
+        Raises:
+            DatabaseError: If stats retrieval fails
+        """
         try:
             total_queries = self.db.query(func.count(QueryLog.id)).scalar()
             
@@ -250,27 +283,35 @@ class DocumentService:
                 QueryLog.total_tokens.isnot(None)
             ).scalar()
             
-            return {
-                'total_queries': total_queries or 0,
-                'successful_queries': successful or 0,
-                'success_rate': (successful / total_queries * 100) if total_queries > 0 else 0,
-                'model_usage': {model: count for model, count in model_stats},
-                'avg_files_used': float(avg_files) if avg_files else 0,
-                'total_tokens_used': int(total_tokens) if total_tokens else 0,
-                'avg_tokens_per_query': float(avg_tokens) if avg_tokens else 0
-            }
+            return StatsResponse(
+                total_queries=total_queries or 0,
+                successful_queries=successful or 0,
+                success_rate=(successful / total_queries * 100) if total_queries > 0 else 0,
+                model_usage={model: count for model, count in model_stats},
+                avg_files_used=float(avg_files) if avg_files else 0,
+                total_tokens_used=int(total_tokens) if total_tokens else 0,
+                avg_tokens_per_query=float(avg_tokens) if avg_tokens else 0
+            )
         
         except Exception as e:
-            print(f"❌ Error getting stats: {e}")
-            return {}
+            self.logger.error(f"Error getting stats: {e}", exc_info=True)
+            raise DatabaseError(f"Failed to get query stats: {e}")
     
     def get_query_history(
         self,
         page: int = 1,
         page_size: int = 50,
         order_by: str = 'desc'
-    ) -> dict:
-        """Get query history with pagination"""
+    ) -> QueryHistoryResponse:
+        """
+        Get query history with pagination
+        
+        Returns:
+            QueryHistoryResponse with paginated history
+            
+        Raises:
+            DatabaseError: If history retrieval fails
+        """
         try:
             offset = (page - 1) * page_size
             
@@ -287,18 +328,52 @@ class DocumentService:
             
             history = query.offset(offset).limit(page_size).all()
             
-            return {
-                'history': [log.to_dict() for log in history],
-                'total': total or 0,
-                'page': page,
-                'page_size': page_size
-            }
+            return QueryHistoryResponse(
+                history=[log.to_dict() for log in history],
+                total=total or 0,
+                page=page,
+                page_size=page_size
+            )
         
         except Exception as e:
-            print(f"❌ Error getting query history: {e}")
-            return {
-                'history': [],
-                'total': 0,
-                'page': page,
-                'page_size': page_size
-            }
+            self.logger.error(f"Error getting query history: {e}", exc_info=True)
+            raise DatabaseError(f"Failed to get query history: {e}")
+    
+    def sync_gemini_files_to_db(self, gemini_files: List[Any]) -> int:
+        """
+        Sync Gemini files to database
+        
+        Args:
+            gemini_files: List of Gemini file objects or dicts
+            
+        Returns:
+            Number of files synced
+        """
+        synced_count = 0
+        
+        for file in gemini_files:
+            try:
+                # Handle both dict and object formats
+                if isinstance(file, dict):
+                    file_name = file.get('name')
+                    display_name = file.get('display_name')
+                else:
+                    file_name = file.name
+                    display_name = file.display_name
+                
+                # Check if already indexed
+                existing = self.get_document_by_name(file_name)
+                if existing:
+                    self.logger.debug(f"File {display_name} already indexed, skipping")
+                    continue
+                
+                # For now, we can't easily get content from Gemini files
+                # This would need to be handled by re-uploading or storing content separately
+                self.logger.warning(
+                    f"File {display_name} not indexed (content not available from Gemini API)"
+                )
+                
+            except Exception as e:
+                self.logger.error(f"Error syncing file {display_name}: {e}")
+        
+        return synced_count
