@@ -15,6 +15,7 @@ export interface ChatMessage {
   totalTokens?: number;
   selectedFilesCount?: number;
   model?: string;
+  isStreaming?: boolean;  // New: indicates message is still being streamed
 }
 
 // API Response Types
@@ -143,14 +144,16 @@ export interface WebSocketMessage {
 }
 
 export interface WebSocketResponse {
-  type: 'status' | 'response' | 'error';
-  message: string;
+  type: 'status' | 'response' | 'error' | 'stream' | 'complete';
+  message?: string;
+  chunk?: string;  // For streaming chunks
   success?: boolean;
   model_used?: string;
   files_used?: number;
   prompt_tokens?: number;
   completion_tokens?: number;
   total_tokens?: number;
+  full_response?: string;  // For complete event
 }
 
 // Context Types

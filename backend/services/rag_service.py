@@ -246,6 +246,102 @@ class RAGService:
                 'files_used': 0,
                 'error': str(e)
             }
+    
+    def query_stream(self, 
+                     query: str, 
+                     model_name: str = None, 
+                     selected_file_names: List[str] = None,
+                     system_prompt: str = None,
+                     max_output_tokens: int = 8192):
+        """Query the model with streaming response - yields chunks as they arrive"""
+        if not model_name:
+            model_name = self.DEFAULT_MODEL
+        
+        # Validate model
+        available_model_ids = [m['model_id'] for m in self.get_available_models()]
+        if model_name not in available_model_ids:
+            yield {
+                'type': 'error',
+                'error': f"不支持的模型: {model_name}",
+                'model_used': model_name
+            }
+            return
+        
+        try:
+            model = genai.GenerativeModel(model_name)
+            
+            # Build prompt content
+            prompt_parts = []
+            
+            # Add files if selected
+            files_used = 0
+            if selected_file_names:
+                all_files = self.list_files()
+                file_map = {f['name']: f for f in all_files}
+                
+                for file_name in selected_file_names:
+                    if file_name in file_map:
+                        # Add file reference
+                        file_obj = genai.get_file(file_name)
+                        prompt_parts.append(file_obj)
+                        files_used += 1
+            
+            # Add the actual query with custom or default system prompt
+            default_system_prompt = """基於提供的文件內容，請回答以下問題：
+
+{query}
+
+如果文件中沒有相關信息，請明確說明並提供一般性的回答。"""
+            
+            final_prompt = system_prompt if system_prompt else default_system_prompt
+            prompt_parts.append(final_prompt.format(query=query))
+            
+            # Generate streaming response
+            response_stream = model.generate_content(
+                prompt_parts,
+                generation_config=genai.types.GenerationConfig(
+                    max_output_tokens=max_output_tokens,
+                    temperature=0.7,
+                ),
+                stream=True  # Enable streaming
+            )
+            
+            # Yield chunks as they arrive
+            full_response = ""
+            for chunk in response_stream:
+                if chunk.text:
+                    full_response += chunk.text
+                    yield {
+                        'type': 'chunk',
+                        'text': chunk.text,
+                        'model_used': model_name,
+                        'files_used': files_used
+                    }
+            
+            # Send completion with token usage
+            prompt_tokens = 0
+            completion_tokens = 0
+            total_tokens = 0
+            if hasattr(response_stream, 'usage_metadata'):
+                prompt_tokens = getattr(response_stream.usage_metadata, 'prompt_token_count', 0)
+                completion_tokens = getattr(response_stream.usage_metadata, 'candidates_token_count', 0)
+                total_tokens = getattr(response_stream.usage_metadata, 'total_token_count', 0)
+            
+            yield {
+                'type': 'complete',
+                'full_response': full_response,
+                'system_prompt_used': system_prompt if system_prompt else default_system_prompt.format(query=query),
+                'prompt_tokens': prompt_tokens,
+                'completion_tokens': completion_tokens,
+                'total_tokens': total_tokens
+            }
+            
+        except Exception as e:
+            yield {
+                'type': 'error',
+                'error': str(e),
+                'model_used': model_name
+            }
 
 
 # Global instance

@@ -73,10 +73,63 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
   const handleWebSocketMessage = useCallback((data: WebSocketResponse) => {
     if (data.type === 'status') {
       console.log('Status:', data.message);
-    } else if (data.type === 'response') {
+    } 
+    else if (data.type === 'stream') {
+      // Handle streaming chunk
+      setMessages(prev => {
+        const lastMessage = prev[prev.length - 1];
+        
+        // If last message is a bot message and is streaming, append to it
+        if (lastMessage && lastMessage.sender === 'bot' && lastMessage.isStreaming) {
+          const updatedMessage = {
+            ...lastMessage,
+            text: lastMessage.text + (data.chunk || ''),
+            filesUsed: data.files_used,
+            modelUsed: data.model_used,
+          };
+          return [...prev.slice(0, -1), updatedMessage];
+        } else {
+          // Create new streaming message
+          const streamMessage: ChatMessage = {
+            id: Date.now() + 1,
+            text: data.chunk || '',
+            sender: 'bot',
+            timestamp: new Date(),
+            isStreaming: true,
+            filesUsed: data.files_used,
+            modelUsed: data.model_used,
+          };
+          const newMessages = [...prev, streamMessage];
+          return newMessages.length > MAX_MESSAGES 
+            ? newMessages.slice(-MAX_MESSAGES) 
+            : newMessages;
+        }
+      });
+    }
+    else if (data.type === 'complete') {
+      // Mark streaming as complete and add metadata
+      setMessages(prev => {
+        const lastMessage = prev[prev.length - 1];
+        if (lastMessage && lastMessage.isStreaming) {
+          const completedMessage = {
+            ...lastMessage,
+            isStreaming: false,
+            success: data.success !== false,
+            promptTokens: data.prompt_tokens,
+            completionTokens: data.completion_tokens,
+            totalTokens: data.total_tokens,
+          };
+          return [...prev.slice(0, -1), completedMessage];
+        }
+        return prev;
+      });
+      setIsLoading(false);
+    }
+    else if (data.type === 'response') {
+      // Fallback for non-streaming response
       const botMessage: ChatMessage = {
         id: Date.now() + 1,
-        text: data.message,
+        text: data.message || '',
         sender: 'bot',
         timestamp: new Date(),
         success: data.success,
@@ -90,16 +143,16 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
 
       setMessages(prev => {
         const newMessages = [...prev, botMessage];
-        // Limit to MAX_MESSAGES
         return newMessages.length > MAX_MESSAGES 
           ? newMessages.slice(-MAX_MESSAGES) 
           : newMessages;
       });
       setIsLoading(false);
-    } else if (data.type === 'error') {
+    } 
+    else if (data.type === 'error') {
       const errorMessage: ChatMessage = {
         id: Date.now() + 1,
-        text: data.message,
+        text: data.message || 'An error occurred',
         sender: 'bot',
         timestamp: new Date(),
         success: false,

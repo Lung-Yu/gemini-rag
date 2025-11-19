@@ -110,6 +110,13 @@ async def websocket_chat(websocket: WebSocket):
         while True:
             # Receive message from client
             data = await websocket.receive_text()
+            
+            # Handle heartbeat ping/pong
+            if data == 'ping':
+                await websocket.send_text('pong')
+                continue
+            
+            print(f"📨 WebSocket received raw data: {data[:100]}...")  # Debug log
             request_data = json.loads(data)
             
             message = request_data.get('message', '').strip()
@@ -131,65 +138,89 @@ async def websocket_chat(websocket: WebSocket):
                     'message': '正在處理您的請求...'
                 })
                 
-                # Query with specified model, files, and system prompt
-                result = rag_service.query(
+                # Use streaming query for real-time response
+                full_response = ""
+                prompt_tokens = 0
+                completion_tokens = 0
+                total_tokens = 0
+                files_used = 0
+                system_prompt_used = None
+                
+                for chunk_data in rag_service.query_stream(
                     query=message,
                     model_name=model,
                     selected_file_names=selected_files,
                     system_prompt=system_prompt
-                )
+                ):
+                    if chunk_data['type'] == 'chunk':
+                        # Send each chunk to client immediately
+                        await websocket.send_json({
+                            'type': 'stream',
+                            'chunk': chunk_data['text'],
+                            'model_used': chunk_data['model_used'],
+                            'files_used': chunk_data['files_used']
+                        })
+                        full_response += chunk_data['text']
+                        files_used = chunk_data['files_used']
+                        
+                    elif chunk_data['type'] == 'complete':
+                        # Store completion metadata
+                        prompt_tokens = chunk_data.get('prompt_tokens', 0)
+                        completion_tokens = chunk_data.get('completion_tokens', 0)
+                        total_tokens = chunk_data.get('total_tokens', 0)
+                        system_prompt_used = chunk_data.get('system_prompt_used')
+                        
+                    elif chunk_data['type'] == 'error':
+                        # Handle streaming error
+                        await websocket.send_json({
+                            'type': 'error',
+                            'message': f'發生錯誤: {chunk_data["error"]}'
+                        })
+                        
+                        # Log failed query
+                        try:
+                            doc_service.log_query(
+                                query=message,
+                                model_used=model,
+                                success=False,
+                                files_used=0,
+                                selected_files=selected_files,
+                                system_prompt_used=system_prompt,
+                                error_message=chunk_data['error']
+                            )
+                        except Exception as log_error:
+                            print(f"⚠️ 記錄查詢失敗: {log_error}")
+                        break
                 
-                if result['success']:
-                    # Log query to database
-                    try:
-                        doc_service.log_query(
-                            query=message,
-                            model_used=result.get('model_used', model),
-                            success=True,
-                            files_used=result.get('files_used', 0),
-                            selected_files=selected_files,
-                            system_prompt_used=result.get('system_prompt_used'),
-                            response_length=len(result.get('response', '')),
-                            prompt_tokens=result.get('prompt_tokens'),
-                            completion_tokens=result.get('completion_tokens'),
-                            total_tokens=result.get('total_tokens')
-                        )
-                    except Exception as log_error:
-                        print(f"⚠️ 記錄查詢失敗: {log_error}")
-                    
-                    # Send successful response
+                # If we got a full response, send completion signal
+                if full_response:
                     await websocket.send_json({
-                        'type': 'response',
+                        'type': 'complete',
                         'success': True,
-                        'message': result['response'],
-                        'model_used': result.get('model_used', model),
-                        'files_used': result.get('files_used', 0),
-                        'prompt_tokens': result.get('prompt_tokens'),
-                        'completion_tokens': result.get('completion_tokens'),
-                        'total_tokens': result.get('total_tokens')
+                        'full_response': full_response,
+                        'model_used': model,
+                        'files_used': files_used,
+                        'prompt_tokens': prompt_tokens,
+                        'completion_tokens': completion_tokens,
+                        'total_tokens': total_tokens
                     })
-                else:
-                    # Log failed query
+                    
+                    # Log successful query
                     try:
                         doc_service.log_query(
                             query=message,
                             model_used=model,
-                            success=False,
-                            files_used=0,
+                            success=True,
+                            files_used=files_used,
                             selected_files=selected_files,
-                            system_prompt_used=result.get('system_prompt_used'),
-                            error_message=result.get('error', 'Unknown error')
+                            system_prompt_used=system_prompt_used,
+                            response_length=len(full_response),
+                            prompt_tokens=prompt_tokens,
+                            completion_tokens=completion_tokens,
+                            total_tokens=total_tokens
                         )
                     except Exception as log_error:
                         print(f"⚠️ 記錄查詢失敗: {log_error}")
-                    
-                    # Send error response
-                    await websocket.send_json({
-                        'type': 'response',
-                        'success': False,
-                        'message': result.get('response', '查詢失敗'),
-                        'error': result.get('error', 'Unknown error')
-                    })
                     
             except ValueError as ve:
                 await websocket.send_json({

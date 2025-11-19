@@ -156,13 +156,16 @@ export function ChatInterface() {
     messages.map((message: ChatMessage) => (
       <div
         key={message.id}
-        className={`message ${message.sender} ${message.isError ? 'error' : ''}`}
+        className={`message ${message.sender} ${message.isError ? 'error' : ''} ${message.isStreaming ? 'streaming' : ''}`}
       >
         <div className="message-avatar">
           {message.sender === 'user' ? <FiUser /> : <FaRobot />}
         </div>
         <div className="message-content">
-          <div className="message-text">{message.text}</div>
+          <div className="message-text">
+            {message.text}
+            {message.isStreaming && <span className="streaming-cursor">▋</span>}
+          </div>
           <div className="message-meta">
             {message.filesUsed && (
               <span><FiFolder /> {message.filesUsed} 個檔案</span>
@@ -176,6 +179,11 @@ export function ChatInterface() {
             {message.promptTokens !== undefined && message.completionTokens !== undefined && (
               <span>
                 <FiClipboard /> 輸入: {message.promptTokens} | 輸出: {message.completionTokens} tokens
+              </span>
+            )}
+            {message.isStreaming && (
+              <span className="streaming-indicator">
+                <FiLoader className="spinner" /> 生成中...
               </span>
             )}
           </div>
