@@ -166,14 +166,14 @@ export function QueryHistory() {
 
   // Delete selected history (not implemented in API yet)
   const handleDeleteSelected = useCallback(async () => {
-    showMessage('刪除功能尚未實現', 'error');
-  }, [showMessage]);
+    // Feature not implemented yet - button is disabled
+  }, []);
 
   // Clear all history (not implemented in API yet)
   const handleClearAll = useCallback(async () => {
-    showMessage('清除功能尚未實現', 'error');
+    // Feature not implemented yet - button is disabled
     setSelectedQueries(new Set());
-  }, [showMessage]);
+  }, []);
 
   // Export history
   const handleExport = useCallback(async () => {
@@ -230,8 +230,8 @@ export function QueryHistory() {
           <Button
             variant="danger"
             onClick={handleClearAll}
-            disabled={history.length === 0}
-            title="清除所有記錄"
+            disabled={true}
+            title="清除功能尚未實現"
           >
             <FiTrash2 /> 清除全部
           </Button>
@@ -320,6 +320,8 @@ export function QueryHistory() {
                 variant="danger"
                 size="small"
                 onClick={handleDeleteSelected}
+                disabled={true}
+                title="刪除功能尚未實現"
               >
                 <FiTrash2 /> 刪除選定
               </Button>
@@ -399,11 +401,12 @@ export function QueryHistory() {
                     <Button
                       variant="danger"
                       size="small"
-                      onClick={() => showMessage('刪除功能尚未實現', 'error')}
-                      title="刪除記錄"
+                      onClick={() => {}}
+                      disabled={true}
+                      title="刪除記錄功能尚未實現"
                     >
                       <FiTrash2 />
-                    </Button>showMessage('刪除功能尚未實現', 'error'
+                    </Button>
                   </div>
                 </div>
 
