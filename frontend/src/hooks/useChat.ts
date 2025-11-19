@@ -132,24 +132,19 @@ export function useChat(): UseChatReturn {
     }
 
     try {
-      // Auto-use all files if none selected
-      let filesToUse = selectedFiles;
-      if (filesToUse.length === 0) {
-        try {
-          const filesData = await apiClient.listFiles();
-          if (filesData.files && filesData.files.length > 0) {
-            filesToUse = filesData.files.map(f => f.name);
-            console.log(`Auto-selecting ${filesToUse.length} files for context`);
-          }
-        } catch (error) {
-          console.error('Failed to auto-load files:', error);
-        }
+      // Use manually selected files if any, otherwise let backend handle auto-retrieval
+      const filesToUse = selectedFiles.length > 0 ? selectedFiles : null;
+      
+      if (filesToUse) {
+        console.log(`Using ${filesToUse.length} manually selected files`);
+      } else {
+        console.log('No files selected, backend will auto-retrieve relevant documents');
       }
 
       await sendMessage(
         message,
         selectedModel,
-        filesToUse.length > 0 ? filesToUse : null,
+        filesToUse,
         systemPrompt || null
       );
 

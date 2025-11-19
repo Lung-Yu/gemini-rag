@@ -52,13 +52,38 @@ async def chat(
             detail=f"Unsupported model: {request.model}. Please choose from available models."
         )
     
+    # Auto-retrieve relevant documents using vector search if no files manually selected
+    selected_files = request.selected_files
+    retrieved_files_info = None
+    
+    if not selected_files and request.enable_auto_retrieval:
+        try:
+            similar_docs = doc_service.search_similar_documents(
+                query=request.message,
+                top_k=request.top_k,
+                similarity_threshold=request.similarity_threshold
+            )
+            if similar_docs:
+                selected_files = [doc.gemini_file_name for doc, score in similar_docs]
+                retrieved_files_info = [(doc.gemini_file_name, doc.display_name, float(score)) for doc, score in similar_docs]
+                logger.info(f"Auto-retrieved {len(retrieved_files_info)} documents for query")
+        except Exception as e:
+            logger.warning(f"Auto-retrieval failed: {e}")
+    
     # Query with specified model, files, and system prompt
     result = rag_service.query(
         query=request.message,
         model_name=request.model,
-        selected_file_names=request.selected_files,
+        selected_file_names=selected_files,
         system_prompt=request.system_prompt
     )
+    
+    # Add retrieval info to result
+    if retrieved_files_info:
+        result['retrieved_files'] = retrieved_files_info
+        result['auto_retrieval_enabled'] = True
+    else:
+        result['auto_retrieval_enabled'] = request.enable_auto_retrieval and not request.selected_files
     
     # Log the query
     try:
@@ -83,12 +108,27 @@ async def chat(
             raise HTTPException(status_code=429, detail=result.get("message", "Rate limit exceeded"))
         raise HTTPException(status_code=500, detail=result.get("response", "Query failed"))
     
+    # Convert retrieved_files to RetrievedFile objects
+    from backend.models.schemas import RetrievedFile
+    retrieved_files_data = None
+    if result.get("retrieved_files"):
+        retrieved_files_data = [
+            RetrievedFile(
+                gemini_file_name=f[0],
+                display_name=f[1],
+                similarity_score=f[2]
+            )
+            for f in result["retrieved_files"]
+        ]
+    
     return ChatResponse(
         success=result["success"],
         message=result.get("response", ""),
         response=result.get("response", ""),
         model_used=result.get("model_used"),
         files_used=result.get("files_used", 0),
+        retrieved_files=retrieved_files_data,
+        auto_retrieval_enabled=result.get("auto_retrieval_enabled"),
         prompt_tokens=result.get("prompt_tokens"),
         completion_tokens=result.get("completion_tokens"),
         total_tokens=result.get("total_tokens")
@@ -145,6 +185,9 @@ async def websocket_chat(
             model = request_data.get('model', 'gemini-1.5-flash')
             selected_files = request_data.get('selected_files', None)
             system_prompt = request_data.get('system_prompt', None)
+            enable_auto_retrieval = request_data.get('enable_auto_retrieval', True)
+            top_k = request_data.get('top_k', 5)
+            similarity_threshold = request_data.get('similarity_threshold', 0.7)
             
             if not message:
                 await websocket.send_json({
@@ -159,6 +202,25 @@ async def websocket_chat(
                     'type': 'status',
                     'message': '正在處理您的請求...'
                 })
+                
+                # Auto-retrieve relevant documents using vector search if no files manually selected
+                retrieved_files = None
+                auto_retrieval_enabled_result = False
+                
+                if not selected_files and enable_auto_retrieval:
+                    try:
+                        similar_docs = doc_service.search_similar_documents(
+                            query=message,
+                            top_k=top_k,
+                            similarity_threshold=similarity_threshold
+                        )
+                        if similar_docs:
+                            selected_files = [doc.gemini_file_name for doc, score in similar_docs]
+                            retrieved_files = [(doc.gemini_file_name, doc.display_name, float(score)) for doc, score in similar_docs]
+                            auto_retrieval_enabled_result = True
+                            logger.info(f"Auto-retrieved {len(retrieved_files)} documents for WebSocket query")
+                    except Exception as e:
+                        logger.warning(f"Auto-retrieval failed: {e}")
                 
                 # Use streaming query for real-time response
                 full_response = ""
@@ -216,7 +278,7 @@ async def websocket_chat(
                 
                 # If we got a full response, send completion signal
                 if full_response:
-                    await websocket.send_json({
+                    completion_data = {
                         'type': 'complete',
                         'success': True,
                         'full_response': full_response,
@@ -224,8 +286,22 @@ async def websocket_chat(
                         'files_used': files_used,
                         'prompt_tokens': prompt_tokens,
                         'completion_tokens': completion_tokens,
-                        'total_tokens': total_tokens
-                    })
+                        'total_tokens': total_tokens,
+                        'auto_retrieval_enabled': auto_retrieval_enabled_result
+                    }
+                    
+                    # Add retrieved files info if available
+                    if retrieved_files:
+                        completion_data['retrieved_files'] = [
+                            {
+                                'gemini_file_name': f[0],
+                                'display_name': f[1],
+                                'similarity_score': f[2]
+                            }
+                            for f in retrieved_files
+                        ]
+                    
+                    await websocket.send_json(completion_data)
                     
                     # Log successful query
                     try:
