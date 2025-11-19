@@ -10,7 +10,7 @@ export const HISTORY_PAGE_SIZE = 20;
 
 // Search Settings
 export const DEFAULT_TOP_K = 5;
-export const DEFAULT_SIMILARITY_THRESHOLD = 0.7;
+export const DEFAULT_SIMILARITY_THRESHOLD = 0.6;  // 降低閾值以提高召回率
 
 // WebSocket Settings
 export const MAX_RECONNECT_ATTEMPTS = 5;

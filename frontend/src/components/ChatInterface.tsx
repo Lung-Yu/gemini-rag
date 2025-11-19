@@ -124,6 +124,7 @@ export function ChatInterface() {
 
     try {
       await handleSendMessage(messageText);
+      // handleSendMessage 會自動清空 selectedFiles
     } catch (error) {
       console.error('Failed to send message:', error);
       // Error is handled in the hook and context
@@ -399,6 +400,46 @@ export function ChatInterface() {
               </Button>
             </div>
           </Card>
+        </div>
+      )}
+
+      {/* Selected Files Indicator */}
+      {selectedFiles.length > 0 && (
+        <div className="selected-files-indicator">
+          <div className="selected-files-badge">
+            <FiFolder />
+            <span>已選擇 {selectedFiles.length} 個文件</span>
+            <button
+              className="clear-selection-btn"
+              onClick={() => setSelectedFiles([])}
+              title="清除選擇"
+            >
+              <FiX />
+            </button>
+          </div>
+          <div className="selected-files-list">
+            {searchResults
+              .filter(r => selectedFiles.includes(r.gemini_file_name))
+              .map(r => (
+                <span key={r.gemini_file_name} className="selected-file-tag">
+                  {r.display_name}
+                  <button
+                    onClick={() => toggleFileSelection(r.gemini_file_name)}
+                    className="remove-file-btn"
+                  >
+                    <FiX />
+                  </button>
+                </span>
+              ))
+            }
+          </div>
+        </div>
+      )}
+
+      {selectedFiles.length === 0 && (
+        <div className="auto-retrieval-hint">
+          <FiZap />
+          <span>AI 檢索模式：系統將自動檢索相關文件</span>
         </div>
       )}
 

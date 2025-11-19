@@ -197,8 +197,8 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
 
     try {
       if (chatWebSocket.isConnected()) {
-        // Use WebSocket
-        chatWebSocket.sendMessage(message, model, selectedFiles, systemPrompt);
+        // Use WebSocket with auto-retrieval parameters
+        chatWebSocket.sendMessage(message, model, selectedFiles, systemPrompt, true, 5, 0.6);
       } else {
         // Fallback to HTTP API
         console.log('WebSocket not connected, using HTTP fallback');

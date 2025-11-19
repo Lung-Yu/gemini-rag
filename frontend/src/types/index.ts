@@ -141,6 +141,9 @@ export interface WebSocketMessage {
   model: string;
   selected_files: string[] | null;
   system_prompt: string | null;
+  enable_auto_retrieval?: boolean;
+  top_k?: number;
+  similarity_threshold?: number;
 }
 
 export interface WebSocketResponse {

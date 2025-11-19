@@ -141,6 +141,7 @@ export function useChat(): UseChatReturn {
         console.log('No files selected, backend will auto-retrieve relevant documents');
       }
 
+      // Send message
       await sendMessage(
         message,
         selectedModel,
@@ -148,15 +149,19 @@ export function useChat(): UseChatReturn {
         systemPrompt || null
       );
 
-      // Clear file selection after successful send
+      // ✅ 強制清空選擇：確保下次查詢不會誤用舊的文件選擇
       setSelectedFiles([]);
       setSearchResults([]);
+      console.log('✓ File selection cleared after message sent');
       
     } catch (error) {
       console.error('Failed to send message:', error);
+      // 即使發送失敗，也清空選擇（避免用戶重試時使用舊選擇）
+      setSelectedFiles([]);
+      setSearchResults([]);
       throw error; // Re-throw to let caller handle
     }
-  }, [selectedFiles, selectedModel, systemPrompt, sendMessage]);
+  }, [selectedFiles, selectedModel, systemPrompt, sendMessage, setSelectedFiles, setSearchResults]);
 
   // Memoized return value for performance
   return useMemo(() => ({

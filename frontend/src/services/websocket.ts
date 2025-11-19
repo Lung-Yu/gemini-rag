@@ -238,7 +238,10 @@ export class ChatWebSocketManager {
     message: string,
     model: string,
     selectedFiles?: string[] | null,
-    systemPrompt?: string | null
+    systemPrompt?: string | null,
+    enableAutoRetrieval: boolean = true,
+    topK: number = 5,
+    similarityThreshold: number = 0.6
   ): void {
     if (!this.isConnected()) {
       throw new Error('WebSocket is not connected');
@@ -248,7 +251,10 @@ export class ChatWebSocketManager {
       message,
       model,
       selected_files: selectedFiles || null,
-      system_prompt: systemPrompt || null
+      system_prompt: systemPrompt || null,
+      enable_auto_retrieval: enableAutoRetrieval,
+      top_k: topK,
+      similarity_threshold: similarityThreshold
     };
 
     try {
