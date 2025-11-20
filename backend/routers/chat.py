@@ -58,22 +58,23 @@ async def chat(
     
     # DEBUG: 詳細記錄自動檢索條件
     logger.info(f"[POST AUTO-RETRIEVAL CHECK] selected_files={selected_files}, enable_auto_retrieval={request.enable_auto_retrieval}")
+    logger.info(f"[POST PARAMS] top_k={request.top_k}, similarity_threshold={request.similarity_threshold}")
     
     if not selected_files and request.enable_auto_retrieval:
         logger.info("[POST AUTO-RETRIEVAL] Starting automatic document retrieval...")
         try:
-            # Get ALL files sorted by similarity (no limit, no threshold)
+            # Use user's settings for retrieval
             similar_docs = doc_service.search_similar_documents(
                 query=request.message,
-                top_k=None,  # No limit - return all files
-                similarity_threshold=0.0  # No filtering - sort by relevance
+                top_k=request.top_k if request.top_k else None,
+                similarity_threshold=request.similarity_threshold if request.similarity_threshold is not None else 0.0
             )
             if similar_docs:
                 selected_files = [doc.gemini_file_name for doc, score in similar_docs]
                 retrieved_files_info = [(doc.gemini_file_name, doc.display_name, float(score)) for doc, score in similar_docs]
-                logger.info(f"[POST AUTO-RETRIEVAL SUCCESS] Retrieved {len(retrieved_files_info)} documents")
+                logger.info(f"[POST AUTO-RETRIEVAL SUCCESS] Retrieved {len(retrieved_files_info)} documents (top_k={request.top_k}, threshold={request.similarity_threshold})")
             else:
-                logger.warning("[POST AUTO-RETRIEVAL] No documents found")
+                logger.warning("[POST AUTO-RETRIEVAL] No documents found matching criteria")
         except Exception as e:
             logger.error(f"[POST AUTO-RETRIEVAL ERROR] {e}", exc_info=True)
     else:
@@ -241,23 +242,24 @@ async def websocket_chat(
                 
                 # DEBUG: 詳細記錄自動檢索條件
                 logger.info(f"[AUTO-RETRIEVAL CHECK] selected_files={selected_files}, enable_auto_retrieval={enable_auto_retrieval}")
+                logger.info(f"[WS PARAMS] top_k={top_k}, similarity_threshold={similarity_threshold}")
                 
                 if not selected_files and enable_auto_retrieval:
                     logger.info("[AUTO-RETRIEVAL] Starting automatic document retrieval...")
                     try:
-                        # Get ALL files sorted by similarity (no limit, no threshold)
+                        # Use user's settings for retrieval
                         similar_docs = doc_service.search_similar_documents(
                             query=message,
-                            top_k=None,  # No limit - return all files
-                            similarity_threshold=0.0  # No filtering - sort by relevance
+                            top_k=top_k if top_k else None,
+                            similarity_threshold=similarity_threshold if similarity_threshold is not None else 0.0
                         )
                         if similar_docs:
                             selected_files = [doc.gemini_file_name for doc, score in similar_docs]
                             retrieved_files = [(doc.gemini_file_name, doc.display_name, float(score)) for doc, score in similar_docs]
                             auto_retrieval_enabled_result = True
-                            logger.info(f"[AUTO-RETRIEVAL SUCCESS] Retrieved {len(retrieved_files)} documents sorted by relevance")
+                            logger.info(f"[AUTO-RETRIEVAL SUCCESS] Retrieved {len(retrieved_files)} documents (top_k={top_k}, threshold={similarity_threshold})")
                         else:
-                            logger.warning("[AUTO-RETRIEVAL] No documents found in vector search")
+                            logger.warning("[AUTO-RETRIEVAL] No documents found matching criteria")
                     except Exception as e:
                         logger.error(f"[AUTO-RETRIEVAL ERROR] {e}", exc_info=True)
                 else:
