@@ -175,7 +175,9 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     message: string,
     model: string,
     selectedFiles?: string[] | null,
-    systemPrompt?: string | null
+    systemPrompt?: string | null,
+    topK?: number,
+    similarityThreshold?: number
   ): Promise<void> => {
     // Add user message
     const userMessage: ChatMessage = {
@@ -199,7 +201,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     try {
       if (chatWebSocket.isConnected()) {
         // Use WebSocket with auto-retrieval parameters
-        chatWebSocket.sendMessage(message, model, selectedFiles, systemPrompt, true, 5, 0.6);
+        chatWebSocket.sendMessage(message, model, selectedFiles, systemPrompt, true, topK ?? 5, similarityThreshold ?? 0.6);
       } else {
         // Fallback to HTTP API
         console.log('WebSocket not connected, using HTTP fallback');

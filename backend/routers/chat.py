@@ -189,6 +189,9 @@ async def websocket_chat(
             top_k = request_data.get('top_k', 5)
             similarity_threshold = request_data.get('similarity_threshold', 0.7)
             
+            # Debug logging for retrieval parameters
+            logger.info(f"WebSocket retrieval params - top_k: {top_k} (type: {type(top_k)}), similarity_threshold: {similarity_threshold}")
+            
             if not message:
                 await websocket.send_json({
                     'type': 'error',

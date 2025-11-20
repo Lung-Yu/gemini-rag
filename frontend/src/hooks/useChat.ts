@@ -18,6 +18,10 @@ export function useChat(): UseChatReturn {
   // System prompt management
   const { value: systemPrompt, setValue: setSystemPromptState } = useLocalStorage('systemPrompt', DEFAULT_SYSTEM_PROMPT_ZH);
 
+  // Auto-retrieval settings
+  const { value: topK, setValue: setTopKState } = useLocalStorage('topK', DEFAULT_TOP_K);
+  const { value: similarityThreshold, setValue: setSimilarityThresholdState } = useLocalStorage('similarityThreshold', DEFAULT_SIMILARITY_THRESHOLD);
+
   // File selection and search
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -89,6 +93,18 @@ export function useChat(): UseChatReturn {
     setSystemPromptState(prompt);
   }, [setSystemPromptState]);
 
+  // Set top_k
+  const setTopK = useCallback((value: number) => {
+    const clamped = Math.max(1, Math.min(21, value)); // Allow 21 for unlimited
+    setTopKState(clamped);
+  }, [setTopKState]);
+
+  // Set similarity threshold
+  const setSimilarityThreshold = useCallback((value: number) => {
+    const clamped = Math.max(0, Math.min(1, value));
+    setSimilarityThresholdState(clamped);
+  }, [setSimilarityThresholdState]);
+
   // Search files
   const handleSearchFiles = useCallback(async (query: string): Promise<void> => {
     // Validate query
@@ -106,8 +122,8 @@ export function useChat(): UseChatReturn {
     try {
       const data = await apiClient.searchDocuments({
         query,
-        top_k: DEFAULT_TOP_K,
-        similarity_threshold: DEFAULT_SIMILARITY_THRESHOLD
+        top_k: topK === 21 ? undefined : topK,
+        similarity_threshold: similarityThreshold
       });
       
       setSearchResults(data.results || []);
@@ -122,7 +138,7 @@ export function useChat(): UseChatReturn {
     } finally {
       setIsSearching(false);
     }
-  }, []);
+  }, [topK, similarityThreshold]);
 
   // Send message
   const handleSendMessage = useCallback(async (message: string): Promise<void> => {
@@ -141,12 +157,14 @@ export function useChat(): UseChatReturn {
         console.log('No files selected, backend will auto-retrieve relevant documents');
       }
 
-      // Send message
+      // Send message with auto-retrieval parameters
       await sendMessage(
         message,
         selectedModel,
         filesToUse,
-        systemPrompt || null
+        systemPrompt || null,
+        topK === 21 ? undefined : topK,
+        similarityThreshold
       );
 
       // ✅ 強制清空選擇：確保下次查詢不會誤用舊的文件選擇
@@ -161,7 +179,7 @@ export function useChat(): UseChatReturn {
       setSearchResults([]);
       throw error; // Re-throw to let caller handle
     }
-  }, [selectedFiles, selectedModel, systemPrompt, sendMessage, setSelectedFiles, setSearchResults]);
+  }, [selectedFiles, selectedModel, systemPrompt, topK, similarityThreshold, sendMessage, setSelectedFiles, setSearchResults]);
 
   // Memoized return value for performance
   return useMemo(() => ({
@@ -172,6 +190,10 @@ export function useChat(): UseChatReturn {
     modelsError,
     systemPrompt,
     setSystemPrompt,
+    topK,
+    setTopK,
+    similarityThreshold,
+    setSimilarityThreshold,
     selectedFiles,
     setSelectedFiles,
     searchResults,
@@ -187,6 +209,10 @@ export function useChat(): UseChatReturn {
     modelsError,
     systemPrompt,
     setSystemPrompt,
+    topK,
+    setTopK,
+    similarityThreshold,
+    setSimilarityThreshold,
     selectedFiles,
     searchResults,
     handleSearchFiles,

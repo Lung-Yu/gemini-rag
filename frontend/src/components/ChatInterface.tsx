@@ -27,6 +27,10 @@ export function ChatInterface() {
     modelsError,
     systemPrompt,
     setSystemPrompt,
+    topK,
+    setTopK,
+    similarityThreshold,
+    setSimilarityThreshold,
     selectedFiles,
     setSelectedFiles,
     searchResults,
@@ -42,6 +46,8 @@ export function ChatInterface() {
   const [showFileSelector, setShowFileSelector] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [tempSystemPrompt, setTempSystemPrompt] = useState(systemPrompt);
+  const [tempTopK, setTempTopK] = useState(topK);
+  const [tempSimilarityThreshold, setTempSimilarityThreshold] = useState(similarityThreshold);
   const [showFilesForMessage, setShowFilesForMessage] = useState<number | null>(null);
 
   // Refs
@@ -67,6 +73,16 @@ export function ChatInterface() {
     setTempSystemPrompt(systemPrompt);
   }, [systemPrompt]);
 
+  // Update temp topK when topK changes
+  useEffect(() => {
+    setTempTopK(topK);
+  }, [topK]);
+
+  // Update temp similarityThreshold when similarityThreshold changes
+  useEffect(() => {
+    setTempSimilarityThreshold(similarityThreshold);
+  }, [similarityThreshold]);
+
   // Handle model change
   const handleModelChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedModel(e.target.value);
@@ -75,8 +91,10 @@ export function ChatInterface() {
   // Save system prompt
   const handleSaveSystemPrompt = useCallback(() => {
     setSystemPrompt(tempSystemPrompt);
+    setTopK(tempTopK);
+    setSimilarityThreshold(tempSimilarityThreshold);
     setShowSettings(false);
-  }, [tempSystemPrompt, setSystemPrompt]);
+  }, [tempSystemPrompt, tempTopK, tempSimilarityThreshold, setSystemPrompt, setTopK, setSimilarityThreshold]);
 
   // Reset to default system prompt
   const handleResetSystemPrompt = useCallback(() => {
@@ -266,6 +284,54 @@ export function ChatInterface() {
                   {tempSystemPrompt.length} 字元
                 </div>
               </div>
+              
+              <div className="form-group">
+                <label className="form-label">自動檢索設定：</label>
+                <p className="setting-description">
+                  調整 AI 自動檢索相關文件的參數。降低相似度閾值可以檢索更多文件。
+                </p>
+                <div className="settings-grid">
+                  <div className="setting-item">
+                    <label className="setting-label">
+                      檢索文件數量 (Top K)：
+                      <span className="setting-value">{tempTopK === 21 ? '無上限' : tempTopK}</span>
+                    </label>
+                    <input
+                      type="range"
+                      min="1"
+                      max="21"
+                      step="1"
+                      value={tempTopK}
+                      onChange={(e) => setTempTopK(Number(e.target.value))}
+                      className="range-slider"
+                    />
+                    <div className="range-labels">
+                      <span>1</span>
+                      <span>無上限</span>
+                    </div>
+                  </div>
+                  
+                  <div className="setting-item">
+                    <label className="setting-label">
+                      相似度閾值：
+                      <span className="setting-value">{Math.round(tempSimilarityThreshold * 100)}%</span>
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="5"
+                      value={Math.round(tempSimilarityThreshold * 100)}
+                      onChange={(e) => setTempSimilarityThreshold(Number(e.target.value) / 100)}
+                      className="range-slider"
+                    />
+                    <div className="range-labels">
+                      <span>0% (寬鬆)</span>
+                      <span>100% (嚴格)</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
               <div className="settings-actions">
                 <Button variant="secondary" onClick={handleResetSystemPrompt}>
                   重置為預設（中文）
@@ -312,6 +378,8 @@ export function ChatInterface() {
           size="small"
           onClick={() => {
             setTempSystemPrompt(systemPrompt);
+            setTempTopK(topK);
+            setTempSimilarityThreshold(similarityThreshold);
             setShowSettings(true);
           }}
           title="系統提示詞設定"

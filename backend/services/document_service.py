@@ -153,7 +153,7 @@ class DocumentService:
     def search_similar_documents(
         self,
         query: str,
-        top_k: int = 5,
+        top_k: Optional[int] = 5,
         similarity_threshold: float = 0.7
     ) -> List[Tuple[Document, float]]:
         """
@@ -177,14 +177,21 @@ class DocumentService:
             
             # Perform vector similarity search using pgvector
             # Using cosine distance (1 - cosine similarity)
-            results = self.db.query(
+            query_builder = self.db.query(
                 Document,
                 (1 - Document.embedding.cosine_distance(query_embedding)).label('similarity')
             ).filter(
                 Document.embedding.isnot(None)
             ).order_by(
                 text('similarity DESC')
-            ).limit(top_k).all()
+            )
+            
+            # Apply limit only if top_k is specified (not None)
+            if top_k is not None:
+                results = query_builder.limit(top_k).all()
+            else:
+                # No limit - return all matching documents
+                results = query_builder.all()
             
             # Filter by similarity threshold
             filtered_results = [

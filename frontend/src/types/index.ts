@@ -185,7 +185,7 @@ export interface WebSocketContextType {
   setIsLoading: (loading: boolean) => void;
   wsConnected: boolean;
   wsConnecting: boolean;
-  sendMessage: (message: string, model: string, selectedFiles?: string[] | null, systemPrompt?: string | null) => Promise<void>;
+  sendMessage: (message: string, model: string, selectedFiles?: string[] | null, systemPrompt?: string | null, topK?: number, similarityThreshold?: number) => Promise<void>;
   clearMessages: () => void;
 }
 
@@ -237,6 +237,10 @@ export interface UseChatReturn {
   modelsError: string | null;
   systemPrompt: string;
   setSystemPrompt: (prompt: string) => void;
+  topK: number;
+  setTopK: (value: number) => void;
+  similarityThreshold: number;
+  setSimilarityThreshold: (value: number) => void;
   selectedFiles: string[];
   setSelectedFiles: React.Dispatch<React.SetStateAction<string[]>>;
   searchResults: SearchResult[];
