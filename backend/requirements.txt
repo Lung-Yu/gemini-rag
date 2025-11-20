@@ -10,3 +10,4 @@ sqlalchemy==2.0.23
 psycopg2-binary==2.9.9
 pgvector==0.2.4
 alembic==1.13.1
+PyPDF2==3.0.1

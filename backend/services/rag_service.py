@@ -216,11 +216,13 @@ class RAGService:
                         files_used += 1
             
             # Add the actual query with custom or default system prompt
-            default_system_prompt = """Based on the provided document content, please answer the following question:
+            default_system_prompt = """The documents provided have been sorted by relevance to your question (most relevant first).
+
+Please carefully read through all document contents to find information that answers the following question:
 
 {query}
 
-If the documents don't contain relevant information, please state that clearly and provide a general answer."""
+If you find relevant information, please cite the specific document name(s) in your answer. If none of the documents contain relevant information, please state that clearly."""
             
             final_prompt = system_prompt if system_prompt else default_system_prompt
             prompt_parts.append(final_prompt.format(query=query))
@@ -324,11 +326,13 @@ If the documents don't contain relevant information, please state that clearly a
                         files_used += 1
             
             # Add the actual query with custom or default system prompt
-            default_system_prompt = """Based on the provided document content, please answer the following question:
+            default_system_prompt = """The documents provided have been sorted by relevance to your question (most relevant first).
+
+Please carefully read through all document contents to find information that answers the following question:
 
 {query}
 
-If the documents don't contain relevant information, please state that clearly and provide a general answer."""
+If you find relevant information, please cite the specific document name(s) in your answer. If none of the documents contain relevant information, please state that clearly."""
             
             final_prompt = system_prompt if system_prompt else default_system_prompt
             prompt_parts.append(final_prompt.format(query=query))

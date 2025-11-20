@@ -58,15 +58,16 @@ async def chat(
     
     if not selected_files and request.enable_auto_retrieval:
         try:
+            # Get ALL files sorted by similarity (no limit, no threshold)
             similar_docs = doc_service.search_similar_documents(
                 query=request.message,
-                top_k=request.top_k,
-                similarity_threshold=request.similarity_threshold
+                top_k=None,  # No limit - return all files
+                similarity_threshold=0.0  # No filtering - sort by relevance
             )
             if similar_docs:
                 selected_files = [doc.gemini_file_name for doc, score in similar_docs]
                 retrieved_files_info = [(doc.gemini_file_name, doc.display_name, float(score)) for doc, score in similar_docs]
-                logger.info(f"Auto-retrieved {len(retrieved_files_info)} documents for query")
+                logger.info(f"Auto-retrieved {len(retrieved_files_info)} documents sorted by relevance")
         except Exception as e:
             logger.warning(f"Auto-retrieval failed: {e}")
     
@@ -229,16 +230,17 @@ async def websocket_chat(
                 
                 if not selected_files and enable_auto_retrieval:
                     try:
+                        # Get ALL files sorted by similarity (no limit, no threshold)
                         similar_docs = doc_service.search_similar_documents(
                             query=message,
-                            top_k=top_k,
-                            similarity_threshold=similarity_threshold
+                            top_k=None,  # No limit - return all files
+                            similarity_threshold=0.0  # No filtering - sort by relevance
                         )
                         if similar_docs:
                             selected_files = [doc.gemini_file_name for doc, score in similar_docs]
                             retrieved_files = [(doc.gemini_file_name, doc.display_name, float(score)) for doc, score in similar_docs]
                             auto_retrieval_enabled_result = True
-                            logger.info(f"Auto-retrieved {len(retrieved_files)} documents for WebSocket query")
+                            logger.info(f"Auto-retrieved {len(retrieved_files)} documents sorted by relevance")
                     except Exception as e:
                         logger.warning(f"Auto-retrieval failed: {e}")
                 

@@ -9,6 +9,8 @@ from backend.config import get_settings, Settings
 from backend.utils.logger import get_logger
 import os
 import tempfile
+import io
+from PyPDF2 import PdfReader
 
 router = APIRouter(prefix="/api/files", tags=["files"])
 logger = get_logger(__name__)
@@ -53,10 +55,27 @@ async def upload_file(
     try:
         # Read file content
         content = await file.read()
-        content_text = content.decode('utf-8', errors='ignore')
+        
+        # Extract text based on file type
+        file_ext = os.path.splitext(file.filename)[1].lower()
+        
+        if file_ext == '.pdf':
+            # Extract text from PDF
+            try:
+                pdf_reader = PdfReader(io.BytesIO(content))
+                content_text = ""
+                for page in pdf_reader.pages:
+                    content_text += page.extract_text() + "\n"
+                logger.info(f"Extracted {len(content_text)} characters from PDF: {file.filename}")
+            except Exception as pdf_error:
+                logger.warning(f"Failed to extract PDF text, falling back to raw decode: {pdf_error}")
+                content_text = content.decode('utf-8', errors='ignore')
+        else:
+            # For .txt and other files, decode as UTF-8
+            content_text = content.decode('utf-8', errors='ignore')
         
         # Save uploaded file temporarily
-        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as tmp_file:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp_file:
             tmp_file.write(content)
             tmp_file_path = tmp_file.name
         
@@ -70,6 +89,17 @@ async def upload_file(
             content=content_text,
             file_size=len(content)
         )
+        
+        # Save content to cache for future sync
+        cache_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), '.file_cache')
+        os.makedirs(cache_dir, exist_ok=True)
+        cache_file_path = os.path.join(cache_dir, f"{result['name']}.txt")
+        try:
+            with open(cache_file_path, 'w', encoding='utf-8') as cache_file:
+                cache_file.write(content_text)
+            logger.info(f"Cached content for {file.filename}")
+        except Exception as cache_error:
+            logger.warning(f"Failed to cache file content: {cache_error}")
         
         # Clean up temp file
         os.unlink(tmp_file_path)

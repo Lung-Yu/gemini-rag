@@ -193,13 +193,17 @@ class DocumentService:
                 # No limit - return all matching documents
                 results = query_builder.all()
             
-            # Filter by similarity threshold
-            filtered_results = [
-                (doc, float(sim)) for doc, sim in results 
-                if float(sim) >= similarity_threshold
-            ]
+            # Filter by similarity threshold (if threshold > 0, otherwise return all)
+            if similarity_threshold > 0:
+                filtered_results = [
+                    (doc, float(sim)) for doc, sim in results 
+                    if float(sim) >= similarity_threshold
+                ]
+            else:
+                # No filtering - return all results sorted by similarity
+                filtered_results = [(doc, float(sim)) for doc, sim in results]
             
-            self.logger.info(f"Search found {len(filtered_results)} results for query")
+            self.logger.info(f"Search found {len(filtered_results)} results for query (threshold: {similarity_threshold})")
             return filtered_results
         
         except EmbeddingError:
@@ -358,15 +362,24 @@ class DocumentService:
         """
         synced_count = 0
         
+        # Get cache directory path
+        import os
+        cache_dir = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+            '.file_cache'
+        )
+        
         for file in gemini_files:
             try:
                 # Handle both dict and object formats
                 if isinstance(file, dict):
                     file_name = file.get('name')
                     display_name = file.get('display_name')
+                    file_size = file.get('size_bytes', 0)
                 else:
                     file_name = file.name
                     display_name = file.display_name
+                    file_size = getattr(file, 'size_bytes', 0)
                 
                 # Check if already indexed
                 existing = self.get_document_by_name(file_name)
@@ -374,10 +387,29 @@ class DocumentService:
                     self.logger.debug(f"File {display_name} already indexed, skipping")
                     continue
                 
-                # For now, we can't easily get content from Gemini files
-                # This would need to be handled by re-uploading or storing content separately
+                # Try to read from cache
+                cache_file_path = os.path.join(cache_dir, f"{file_name}.txt")
+                if os.path.exists(cache_file_path):
+                    try:
+                        with open(cache_file_path, 'r', encoding='utf-8') as f:
+                            content = f.read()
+                        
+                        # Create document with cached content
+                        self.create_document(
+                            gemini_file_name=file_name,
+                            display_name=display_name,
+                            content=content,
+                            file_size=file_size
+                        )
+                        synced_count += 1
+                        self.logger.info(f"Synced {display_name} from cache")
+                        continue
+                    except Exception as cache_error:
+                        self.logger.warning(f"Failed to read cache for {display_name}: {cache_error}")
+                
+                # Gemini API doesn't provide file content download
                 self.logger.warning(
-                    f"File {display_name} not indexed (content not available from Gemini API)"
+                    f"File {display_name} not indexed (content not available, no cache found)"
                 )
                 
             except Exception as e:
