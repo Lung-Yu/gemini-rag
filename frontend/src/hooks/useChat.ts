@@ -148,38 +148,24 @@ export function useChat(): UseChatReturn {
     }
 
     try {
-      // Use manually selected files if any, otherwise let backend handle auto-retrieval
-      const filesToUse = selectedFiles.length > 0 ? selectedFiles : null;
-      
-      if (filesToUse) {
-        console.log(`Using ${filesToUse.length} manually selected files`);
-      } else {
-        console.log('No files selected, backend will auto-retrieve relevant documents');
-      }
+      // 完全自動檢索模式 - 不使用手動選擇的檔案
+      console.log('AI auto-retrieval mode: backend will search and analyze relevant documents');
 
-      // Send message with auto-retrieval parameters
+      // Send message with auto-retrieval parameters (no manual file selection)
       await sendMessage(
         message,
         selectedModel,
-        filesToUse,
+        null, // 永遠不傳遞手動選擇的檔案
         systemPrompt || null,
         topK === 21 ? undefined : topK,
         similarityThreshold
       );
-
-      // ✅ 強制清空選擇：確保下次查詢不會誤用舊的文件選擇
-      setSelectedFiles([]);
-      setSearchResults([]);
-      console.log('✓ File selection cleared after message sent');
       
     } catch (error) {
       console.error('Failed to send message:', error);
-      // 即使發送失敗，也清空選擇（避免用戶重試時使用舊選擇）
-      setSelectedFiles([]);
-      setSearchResults([]);
       throw error; // Re-throw to let caller handle
     }
-  }, [selectedFiles, selectedModel, systemPrompt, topK, similarityThreshold, sendMessage, setSelectedFiles, setSearchResults]);
+  }, [selectedModel, systemPrompt, topK, similarityThreshold, sendMessage]);
 
   // Memoized return value for performance
   return useMemo(() => ({

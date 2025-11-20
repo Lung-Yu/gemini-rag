@@ -201,7 +201,9 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     try {
       if (chatWebSocket.isConnected()) {
         // Use WebSocket with auto-retrieval parameters
-        chatWebSocket.sendMessage(message, model, selectedFiles, systemPrompt, true, topK ?? 5, similarityThreshold ?? 0.6);
+        // Only enable auto-retrieval when NO files are manually selected
+        const autoRetrieve = !selectedFiles || selectedFiles.length === 0;
+        chatWebSocket.sendMessage(message, model, selectedFiles, systemPrompt, autoRetrieve, topK ?? 5, similarityThreshold ?? 0.6);
       } else {
         // Fallback to HTTP API
         console.log('WebSocket not connected, using HTTP fallback');

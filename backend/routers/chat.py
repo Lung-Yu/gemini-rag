@@ -56,7 +56,11 @@ async def chat(
     selected_files = request.selected_files
     retrieved_files_info = None
     
+    # DEBUG: 詳細記錄自動檢索條件
+    logger.info(f"[POST AUTO-RETRIEVAL CHECK] selected_files={selected_files}, enable_auto_retrieval={request.enable_auto_retrieval}")
+    
     if not selected_files and request.enable_auto_retrieval:
+        logger.info("[POST AUTO-RETRIEVAL] Starting automatic document retrieval...")
         try:
             # Get ALL files sorted by similarity (no limit, no threshold)
             similar_docs = doc_service.search_similar_documents(
@@ -67,9 +71,16 @@ async def chat(
             if similar_docs:
                 selected_files = [doc.gemini_file_name for doc, score in similar_docs]
                 retrieved_files_info = [(doc.gemini_file_name, doc.display_name, float(score)) for doc, score in similar_docs]
-                logger.info(f"Auto-retrieved {len(retrieved_files_info)} documents sorted by relevance")
+                logger.info(f"[POST AUTO-RETRIEVAL SUCCESS] Retrieved {len(retrieved_files_info)} documents")
+            else:
+                logger.warning("[POST AUTO-RETRIEVAL] No documents found")
         except Exception as e:
-            logger.warning(f"Auto-retrieval failed: {e}")
+            logger.error(f"[POST AUTO-RETRIEVAL ERROR] {e}", exc_info=True)
+    else:
+        if selected_files:
+            logger.info(f"[POST MANUAL MODE] Using {len(selected_files)} manually selected files")
+        else:
+            logger.warning("[POST AUTO-RETRIEVAL DISABLED] No files will be used!")
     
     # Query with specified model, files, and system prompt
     result = rag_service.query(
@@ -228,7 +239,11 @@ async def websocket_chat(
                 retrieved_files = None
                 auto_retrieval_enabled_result = False
                 
+                # DEBUG: 詳細記錄自動檢索條件
+                logger.info(f"[AUTO-RETRIEVAL CHECK] selected_files={selected_files}, enable_auto_retrieval={enable_auto_retrieval}")
+                
                 if not selected_files and enable_auto_retrieval:
+                    logger.info("[AUTO-RETRIEVAL] Starting automatic document retrieval...")
                     try:
                         # Get ALL files sorted by similarity (no limit, no threshold)
                         similar_docs = doc_service.search_similar_documents(
@@ -240,9 +255,16 @@ async def websocket_chat(
                             selected_files = [doc.gemini_file_name for doc, score in similar_docs]
                             retrieved_files = [(doc.gemini_file_name, doc.display_name, float(score)) for doc, score in similar_docs]
                             auto_retrieval_enabled_result = True
-                            logger.info(f"Auto-retrieved {len(retrieved_files)} documents sorted by relevance")
+                            logger.info(f"[AUTO-RETRIEVAL SUCCESS] Retrieved {len(retrieved_files)} documents sorted by relevance")
+                        else:
+                            logger.warning("[AUTO-RETRIEVAL] No documents found in vector search")
                     except Exception as e:
-                        logger.warning(f"Auto-retrieval failed: {e}")
+                        logger.error(f"[AUTO-RETRIEVAL ERROR] {e}", exc_info=True)
+                else:
+                    if selected_files:
+                        logger.info(f"[MANUAL MODE] Using {len(selected_files)} manually selected files")
+                    else:
+                        logger.warning("[AUTO-RETRIEVAL DISABLED] enable_auto_retrieval=False, no files will be used!")
                 
                 # Use streaming query for real-time response
                 full_response = ""

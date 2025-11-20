@@ -31,11 +31,6 @@ export function ChatInterface() {
     setTopK,
     similarityThreshold,
     setSimilarityThreshold,
-    selectedFiles,
-    setSelectedFiles,
-    searchResults,
-    handleSearchFiles,
-    isSearching,
     handleSendMessage,
   } = useChat();
 
@@ -43,7 +38,6 @@ export function ChatInterface() {
 
   // Local state
   const [inputValue, setInputValue] = useState('');
-  const [showFileSelector, setShowFileSelector] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [tempSystemPrompt, setTempSystemPrompt] = useState(systemPrompt);
   const [tempTopK, setTempTopK] = useState(topK);
@@ -106,32 +100,15 @@ export function ChatInterface() {
     setTempSystemPrompt(DEFAULT_SYSTEM_PROMPT_EN);
   }, []);
 
-  // Search files
-  const handleSearch = useCallback(async () => {
-    if (!inputValue.trim() || isSearching) return;
-    
-    await handleSearchFiles(inputValue.trim());
-    setShowFileSelector(true);
-  }, [inputValue, isSearching, handleSearchFiles]);
-
-  // Toggle file selection
-  const toggleFileSelection = useCallback((fileName: string) => {
-    setSelectedFiles(prev => 
-      prev.includes(fileName)
-        ? prev.filter(f => f !== fileName)
-        : [...prev, fileName]
-    );
-  }, [setSelectedFiles]);
+  // 已移除手動檔案搜尋和選擇功能 - 現在完全自動化
 
   // Clear chat
   const handleClearChat = useCallback(() => {
     if (window.confirm('確定要清空所有對話嗎？')) {
       clearMessages();
       setInputValue('');
-      setSelectedFiles([]);
-      setShowFileSelector(false);
     }
-  }, [clearMessages, setSelectedFiles]);
+  }, [clearMessages]);
 
   // Send message
   const handleSend = useCallback(async () => {
@@ -139,11 +116,9 @@ export function ChatInterface() {
 
     const messageText = inputValue.trim();
     setInputValue('');
-    setShowFileSelector(false);
 
     try {
       await handleSendMessage(messageText);
-      // handleSendMessage 會自動清空 selectedFiles
     } catch (error) {
       console.error('Failed to send message:', error);
       // Error is handled in the hook and context
@@ -401,12 +376,6 @@ export function ChatInterface() {
           <connectionStatus.icon className={connectionStatus.icon === FiLoader ? 'spinner' : ''} />
           <span className={connectionStatus.color}>{connectionStatus.text}</span>
         </div>
-
-        {selectedFiles.length > 0 && (
-          <div className="selected-files-indicator">
-            <FiFolder /> 已選 {selectedFiles.length} 個檔案
-          </div>
-        )}
       </div>
 
       {/* Messages Container */}
@@ -456,109 +425,14 @@ export function ChatInterface() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* File Selector Panel */}
-      {showFileSelector && (
-        <div className="file-selector-panel">
-          <Card>
-            <div className="file-selector-header">
-              <h3><FiSearch /> 相關文件 ({searchResults.length})</h3>
-              <Button
-                variant="secondary"
-                size="small"
-                onClick={() => setShowFileSelector(false)}
-                aria-label="關閉檔案列表"
-              >
-                <FiX />
-              </Button>
-            </div>
-            <div className="file-selector-list">
-              {searchResults.map(result => (
-                <div key={result.document_id} className="file-selector-item">
-                  <input
-                    type="checkbox"
-                    checked={selectedFiles.includes(result.gemini_file_name)}
-                    onChange={() => toggleFileSelection(result.gemini_file_name)}
-                  />
-                  <div className="file-info">
-                    <div className="file-name">{result.display_name}</div>
-                    <div className="file-preview">{result.content_preview}</div>
-                    <div className="similarity-score">
-                      相似度: {(result.similarity_score * 100).toFixed(1)}%
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="file-selector-actions">
-              <Button variant="secondary" onClick={() => setSelectedFiles([])}>
-                清除選擇
-              </Button>
-              <Button 
-                variant="secondary" 
-                onClick={() => {
-                  const allFiles = searchResults.map(r => r.gemini_file_name);
-                  setSelectedFiles(allFiles);
-                }}
-              >
-                全選
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* Selected Files Indicator */}
-      {selectedFiles.length > 0 && (
-        <div className="selected-files-indicator">
-          <div className="selected-files-badge">
-            <FiFolder />
-            <span>已選擇 {selectedFiles.length} 個文件</span>
-            <button
-              className="clear-selection-btn"
-              onClick={() => setSelectedFiles([])}
-              title="清除選擇"
-            >
-              <FiX />
-            </button>
-          </div>
-          <div className="selected-files-list">
-            {searchResults
-              .filter(r => selectedFiles.includes(r.gemini_file_name))
-              .map(r => (
-                <span key={r.gemini_file_name} className="selected-file-tag">
-                  {r.display_name}
-                  <button
-                    onClick={() => toggleFileSelection(r.gemini_file_name)}
-                    className="remove-file-btn"
-                  >
-                    <FiX />
-                  </button>
-                </span>
-              ))
-            }
-          </div>
-        </div>
-      )}
-
-      {selectedFiles.length === 0 && (
-        <div className="auto-retrieval-hint">
-          <FiZap />
-          <span>AI 檢索模式：系統將自動檢索相關文件</span>
-        </div>
-      )}
+      {/* AI 自動檢索模式提示 */}
+      <div className="auto-retrieval-hint">
+        <FiZap />
+        <span>AI 智能檢索：系統將根據您的問題自動搜尋並分析相關文件</span>
+      </div>
 
       {/* Input Container */}
       <div className="input-container">
-        <Button
-          variant="secondary"
-          onClick={handleSearch}
-          disabled={!inputValue.trim() || isSearching}
-          title="搜尋相關文件"
-          aria-label="搜尋相關文件"
-        >
-          {isSearching ? <FiLoader className="spinner" /> : <FiSearch />}
-        </Button>
-        
         <textarea
           ref={textareaRef}
           value={inputValue}
