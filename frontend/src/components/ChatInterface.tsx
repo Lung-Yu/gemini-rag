@@ -42,6 +42,7 @@ export function ChatInterface() {
   const [showFileSelector, setShowFileSelector] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [tempSystemPrompt, setTempSystemPrompt] = useState(systemPrompt);
+  const [showFilesForMessage, setShowFilesForMessage] = useState<number | null>(null);
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -168,8 +169,43 @@ export function ChatInterface() {
             {message.isStreaming && <span className="streaming-cursor">▋</span>}
           </div>
           <div className="message-meta">
-            {message.filesUsed && (
-              <span><FiFolder /> {message.filesUsed} 個檔案</span>
+            {message.filesUsed && message.filesUsed > 0 && (
+              <div style={{ position: 'relative', display: 'inline-block' }}>
+                <span 
+                  className={`files-indicator ${message.retrievedFiles && message.retrievedFiles.length > 0 ? 'clickable' : ''}`}
+                  onClick={() => {
+                    if (message.retrievedFiles && message.retrievedFiles.length > 0) {
+                      setShowFilesForMessage(showFilesForMessage === message.id ? null : message.id);
+                    }
+                  }}
+                  title={message.retrievedFiles && message.retrievedFiles.length > 0 ? '點擊查看使用的文件' : ''}
+                >
+                  <FiFolder /> {message.filesUsed} 個檔案
+                </span>
+                {/* Retrieved Files Popup */}
+                {showFilesForMessage === message.id && message.retrievedFiles && message.retrievedFiles.length > 0 && (
+                  <div className="retrieved-files-popup">
+                    <div className="retrieved-files-header">
+                      <span>使用的文件 ({message.retrievedFiles.length})</span>
+                      <button onClick={() => setShowFilesForMessage(null)} className="close-popup-btn">
+                        <FiX />
+                      </button>
+                    </div>
+                    <div className="retrieved-files-list">
+                      {message.retrievedFiles.map((file, index) => (
+                        <div key={index} className="retrieved-file-item">
+                          <div className="file-name">
+                            <FiFolder /> {file.display_name}
+                          </div>
+                          <div className="file-score">
+                            相似度: {(file.similarity_score * 100).toFixed(1)}%
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
             {message.modelUsed && (
               <span><FaRobot /> {message.modelUsed}</span>
@@ -194,7 +230,7 @@ export function ChatInterface() {
         </div>
       </div>
     ))
-  ), [messages]);
+  ), [messages, showFilesForMessage]);
 
   return (
     <div className="chat-interface">

@@ -1,6 +1,12 @@
 // Core TypeScript Interfaces and Types for RAG Frontend
 
 // Message Types
+export interface RetrievedFileInfo {
+  gemini_file_name: string;
+  display_name: string;
+  similarity_score: number;
+}
+
 export interface ChatMessage {
   id: number;
   text: string;
@@ -16,6 +22,7 @@ export interface ChatMessage {
   selectedFilesCount?: number;
   model?: string;
   isStreaming?: boolean;  // New: indicates message is still being streamed
+  retrievedFiles?: RetrievedFileInfo[];  // New: list of retrieved files with scores
 }
 
 // API Response Types
@@ -157,6 +164,7 @@ export interface WebSocketResponse {
   completion_tokens?: number;
   total_tokens?: number;
   full_response?: string;  // For complete event
+  retrieved_files?: RetrievedFileInfo[];  // For complete event - list of retrieved files
 }
 
 // Context Types

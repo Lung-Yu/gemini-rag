@@ -118,6 +118,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
             promptTokens: data.prompt_tokens,
             completionTokens: data.completion_tokens,
             totalTokens: data.total_tokens,
+            retrievedFiles: data.retrieved_files || [],
           };
           return [...prev.slice(0, -1), completedMessage];
         }
