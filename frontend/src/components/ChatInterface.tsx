@@ -198,7 +198,7 @@ export function ChatInterface() {
                   }}
                   title={message.retrievedFiles && message.retrievedFiles.length > 0 ? '點擊查看使用的文件' : ''}
                 >
-                  <FiFolder /> {message.filesUsed} 個檔案
+                  <FiFolder /> {message.retrievedFiles?.length || message.filesUsed} 個檔案
                 </span>
                 {/* Retrieved Files Popup */}
                 {showFilesForMessage === message.id && message.retrievedFiles && message.retrievedFiles.length > 0 && (

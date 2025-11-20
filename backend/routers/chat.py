@@ -79,8 +79,25 @@ async def chat(
     )
     
     # Add retrieval info to result
+    # Filter and deduplicate retrieved files
     if retrieved_files_info:
-        result['retrieved_files'] = retrieved_files_info
+        # Get list of available files from RAG service
+        available_files = rag_service.list_files()
+        available_file_names = {f['name'] for f in available_files}
+        
+        # Filter retrieved_files to only include files that are available
+        filtered_retrieved_files = [
+            f for f in retrieved_files_info 
+            if f[0] in available_file_names
+        ]
+        
+        # Deduplicate files - keep only the highest similarity score for each unique display_name
+        file_map = {}
+        for gemini_name, display_name, score in filtered_retrieved_files:
+            if display_name not in file_map or score > file_map[display_name][2]:
+                file_map[display_name] = (gemini_name, display_name, score)
+        
+        result['retrieved_files'] = list(file_map.values())
         result['auto_retrieval_enabled'] = True
     else:
         result['auto_retrieval_enabled'] = request.enable_auto_retrieval and not request.selected_files
@@ -294,6 +311,29 @@ async def websocket_chat(
                     }
                     
                     # Add retrieved files info if available
+                    # Filter and deduplicate retrieved files
+                    if retrieved_files:
+                        logger.info(f"Before filtering: {len(retrieved_files)} files")
+                        # Get list of available files from RAG service
+                        available_files = rag_service.list_files()
+                        available_file_names = {f['name'] for f in available_files}
+                        
+                        # Filter retrieved_files to only include files that are available
+                        filtered_retrieved_files = [
+                            f for f in retrieved_files 
+                            if f[0] in available_file_names
+                        ]
+                        logger.info(f"After filtering: {len(filtered_retrieved_files)} files")
+                        
+                        # Deduplicate files - keep only the highest similarity score for each unique display_name
+                        file_map = {}
+                        for gemini_name, display_name, score in filtered_retrieved_files:
+                            if display_name not in file_map or score > file_map[display_name][2]:
+                                file_map[display_name] = (gemini_name, display_name, score)
+                        
+                        retrieved_files = list(file_map.values())
+                        logger.info(f"After deduplication: {len(retrieved_files)} files, unique names: {[f[1] for f in retrieved_files]}")
+                    
                     if retrieved_files:
                         completion_data['retrieved_files'] = [
                             {
